@@ -1,0 +1,895 @@
+{
+  "alignment_sample_count": 26,
+  "alignment_samples": [
+    {
+      "machine_point_mm": {
+        "x": 75.0,
+        "y": 158.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 30,
+      "selected_pixel_xy": [
+        141,
+        130
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 89.0,
+        "y": 158.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 25,
+      "selected_pixel_xy": [
+        178,
+        129
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 87.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 119.0,
+        "y": 158.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 15,
+      "selected_pixel_xy": [
+        253,
+        128
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 148.0,
+        "y": 157.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 5,
+      "selected_pixel_xy": [
+        328,
+        127
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 148.0,
+        "y": 128.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 7,
+      "selected_pixel_xy": [
+        328,
+        143
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 104.0,
+        "y": 128.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 22,
+      "selected_pixel_xy": [
+        215,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 72.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 74.0,
+        "y": 114.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 33,
+      "selected_pixel_xy": [
+        141,
+        164
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 119.0,
+        "y": 114.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 18,
+      "selected_pixel_xy": [
+        252,
+        127
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 162.0,
+        "y": 114.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 3,
+      "selected_pixel_xy": [
+        365,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 148.0,
+        "y": 99.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 9,
+      "selected_pixel_xy": [
+        327,
+        164
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 104.0,
+        "y": 99.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 24,
+      "selected_pixel_xy": [
+        215,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 72.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 75.0,
+        "y": 99.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 34,
+      "selected_pixel_xy": [
+        141,
+        128
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 75.0,
+        "y": 100.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 34,
+      "selected_pixel_xy": [
+        141,
+        127
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 104.0,
+        "y": 100.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 24,
+      "selected_pixel_xy": [
+        215,
+        129
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 72.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 147.0,
+        "y": 100.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 9,
+      "selected_pixel_xy": [
+        327,
+        128
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 118.0,
+        "y": 114.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 18,
+      "selected_pixel_xy": [
+        252,
+        124
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 162.0,
+        "y": 114.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 3,
+      "selected_pixel_xy": [
+        365,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 75.0,
+        "y": 114.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 33,
+      "selected_pixel_xy": [
+        141,
+        128
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 148.0,
+        "y": 128.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 7,
+      "selected_pixel_xy": [
+        328,
+        127
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 104.0,
+        "y": 128.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 22,
+      "selected_pixel_xy": [
+        215,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 72.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 148.0,
+        "y": 157.0,
+        "z": 4.0
+      },
+      "selected_charuco_id": 5,
+      "selected_pixel_xy": [
+        327,
+        50
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 119.0,
+        "y": 157.0,
+        "z": 4.0
+      },
+      "selected_charuco_id": 15,
+      "selected_pixel_xy": [
+        253,
+        125
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 90.0,
+        "y": 157.0,
+        "z": 4.0
+      },
+      "selected_charuco_id": 25,
+      "selected_pixel_xy": [
+        178,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 87.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 75.0,
+        "y": 158.0,
+        "z": 4.0
+      },
+      "selected_charuco_id": 30,
+      "selected_pixel_xy": [
+        141,
+        127
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 104.0,
+        "y": 129.0,
+        "z": 4.0
+      },
+      "selected_charuco_id": 22,
+      "selected_pixel_xy": [
+        215,
+        203
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 72.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 148.0,
+        "y": 129.0,
+        "z": 4.0
+      },
+      "selected_charuco_id": 7,
+      "selected_pixel_xy": [
+        328,
+        127
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 29.0
+      }
+    }
+  ],
+  "board_center_mm": [
+    36.25,
+    50.75
+  ],
+  "board_center_px": [
+    270.7503662109375,
+    210.9910888671875
+  ],
+  "board_spec": {
+    "dictionary_name": "DICT_4X4_50",
+    "marker_length_mm": 10.633333333333333,
+    "square_length_mm": 14.5,
+    "squares_x": 6,
+    "squares_y": 8,
+    "type": "charuco"
+  },
+  "reference_machine_z_mm": 2.0,
+  "reference_scanner_position_mm": {
+    "x": 40.0,
+    "y": 170.0,
+    "z": 0.0
+  },
+  "timestamp": "2026-04-23T14:47:14",
+  "tray_plane_fit_rmse_mm": 0.28728674025397694,
+  "tray_plane_model_camera": {
+    "coefficients": [
+      0.009143565781414509,
+      0.00295834057033062,
+      0.9999538660049438,
+      -151.4604949951172
+    ],
+    "reference": "camera_xyz_mm"
+  },
+  "tray_plane_offset_mm": 151.7026824951172,
+  "tray_surface_machine_z_mm": 0.0,
+  "tray_surface_z_max_mm": 2.0,
+  "tray_surface_z_residuals_mm": [
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0
+  ],
+  "tray_surface_z_rmse_mm": 1.6641005886756874,
+  "tray_to_machine_max_mm": 0.8882813567165814,
+  "tray_to_machine_mean_mm": 0.5138356470459576,
+  "tray_to_machine_residuals_mm": [
+    0.4110128048877827,
+    0.7886840129174939,
+    0.5958422474465919,
+    0.33421301289711286,
+    0.402826290248203,
+    0.5011205643350191,
+    0.7973638861624381,
+    0.46732828440319174,
+    0.3468029314159641,
+    0.5270457499396412,
+    0.5273672227077558,
+    0.6830509918024715,
+    0.4891680895153449,
+    0.5092695273900041,
+    0.8882813567165814,
+    0.5372565807442296,
+    0.3468029314159641,
+    0.23645906888874033,
+    0.402826290248203,
+    0.5011205643350191,
+    0.33421301289711286,
+    0.4785181702927783,
+    0.6491813381027232,
+    0.4110128048877827,
+    0.5026305789098007,
+    0.6903285096869476
+  ],
+  "tray_to_machine_rmse_mm": 0.5368756672500571,
+  "tray_to_machine_rotation_degrees": -90.35556194425138,
+  "tray_to_machine_rotation_matrix_xy": [
+    [
+      -0.006203636777532749,
+      -1.0056364670396947
+    ],
+    [
+      -0.9996504066394104,
+      0.003595043130065534
+    ]
+  ],
+  "tray_to_machine_translation_mm": [
+    177.22185047547407,
+    171.72339422245673
+  ],
+  "type": "tray_machine_roi_mapping",
+  "validation": {
+    "detected_plateaus": [
+      {
+        "measured_height_mm": 8.323257446289062,
+        "pixel_count": 687,
+        "seed_height_mm": 8.1
+      },
+      {
+        "measured_height_mm": 18.478408813476562,
+        "pixel_count": 1627,
+        "seed_height_mm": 18.3
+      },
+      {
+        "measured_height_mm": 28.55339813232422,
+        "pixel_count": 777,
+        "seed_height_mm": 28.300000000000004
+      },
+      {
+        "measured_height_mm": 38.79423522949219,
+        "pixel_count": 1087,
+        "seed_height_mm": 38.900000000000006
+      }
+    ],
+    "measured_plateau_heights_raw_mm": [
+      8.323257446289062,
+      18.478408813476562,
+      28.55339813232422,
+      38.79423522949219
+    ],
+    "plane_model": {
+      "coefficients": [
+        0.009143565781414509,
+        0.00295834057033062,
+        0.9999538660049438,
+        -151.4604949951172
+      ],
+      "reference": "camera_xyz_mm"
+    },
+    "plane_offset_mm": 151.43051147460938,
+    "plateau_residuals_mm": [
+      -0.4141659451197189,
+      0.4024727257547358,
+      0.173989008595008,
+      0.026246205729044902,
+      -0.18854199495910962
+    ],
+    "reference_scanner_position_mm": {
+      "x": 40.0,
+      "y": 170.0,
+      "z": 0.0
+    },
+    "staircase_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "staircase_roi_xywh": [
+      276,
+      101,
+      162,
+      161
+    ],
+    "used_measured_plateau_heights_raw_mm": [
+      8.323257446289062,
+      18.478408813476562,
+      28.55339813232422,
+      38.79423522949219
+    ],
+    "used_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "validation_direct_residuals_mm": [
+      0.8767425537109368,
+      0.7215911865234368,
+      0.6466018676757805,
+      0.5057647705078097
+    ],
+    "validation_max_mm": 0.8767425537109368,
+    "validation_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "validation_rmse_mm": 0.7005824941297958,
+    "z_bias_mm": 0.4141659451197189,
+    "z_scale": 1.0072211971363785
+  },
+  "validation_reference": {
+    "reference_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\src\\config\\machine_validation_reference.json",
+    "staircase_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ]
+  },
+  "working_offset_mm": 0.0,
+  "xy_charuco_corner_count": 35,
+  "xy_homography": [
+    [
+      0.006112971121263453,
+      0.39339295069578445,
+      -47.52768287394363
+    ],
+    [
+      -0.3903196107865874,
+      0.002319121600907276,
+      157.17160522150104
+    ],
+    [
+      7.43950611537226e-05,
+      1.956596786371791e-05,
+      1.0
+    ]
+  ],
+  "xy_scale_mm_per_px": 0.38405679166316986,
+  "xy_validation": {
+    "xy_residual_max_mm": 0.186131551861763,
+    "xy_residual_rmse_mm": 0.07110466063022614,
+    "xy_residual_samples_mm": [
+      0.05711526423692703,
+      0.025602199137210846,
+      0.050554729998111725,
+      0.10004664957523346,
+      0.13125291466712952,
+      0.028927285224199295,
+      0.07431710511445999,
+      0.047116514295339584,
+      0.08253084123134613,
+      0.049223460257053375,
+      0.044747475534677505,
+      0.029628032818436623,
+      0.028177529573440552,
+      0.05356595665216446,
+      0.06465539336204529,
+      0.07107505202293396,
+      0.097122423350811,
+      0.017859240993857384,
+      0.041679512709379196,
+      0.04731688275933266,
+      0.03168226033449173,
+      0.11440382152795792,
+      0.139419823884964,
+      0.04424348473548889,
+      0.05883616581559181,
+      0.059203263372182846,
+      0.04959569871425629,
+      0.04892590641975403,
+      0.08917197585105896,
+      0.045772794634103775,
+      0.027600927278399467,
+      0.03660159185528755,
+      0.02853463590145111,
+      0.186131551861763,
+      0.03183027356863022
+    ]
+  },
+  "z_compensation_group_count": 12,
+  "z_compensation_group_slopes_mm_per_mm": [
+    {
+      "group_key": [
+        "id",
+        "30"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 30,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.0,
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 101.5
+      },
+      "z_max_mm": 4.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "25"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 25,
+      "slope_x_mm_per_mm": 0.25,
+      "slope_y_mm_per_mm": -0.25,
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 87.0
+      },
+      "z_max_mm": 4.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "15"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 15,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": -0.25,
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 58.0
+      },
+      "z_max_mm": 4.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "5"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 5,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.0,
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 29.0
+      },
+      "z_max_mm": 4.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "7"
+      ],
+      "sample_count": 3,
+      "selected_charuco_id": 7,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.25,
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 29.0
+      },
+      "z_max_mm": 4.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "22"
+      ],
+      "sample_count": 3,
+      "selected_charuco_id": 22,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.25,
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 72.5
+      },
+      "z_max_mm": 4.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "33"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 33,
+      "slope_x_mm_per_mm": 0.5,
+      "slope_y_mm_per_mm": 0.0,
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 101.5
+      },
+      "z_max_mm": 2.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "18"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 18,
+      "slope_x_mm_per_mm": -0.5,
+      "slope_y_mm_per_mm": 0.0,
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 58.0
+      },
+      "z_max_mm": 2.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "3"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 3,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.0,
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 14.5
+      },
+      "z_max_mm": 2.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "9"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 9,
+      "slope_x_mm_per_mm": -0.5,
+      "slope_y_mm_per_mm": 0.5,
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 29.0
+      },
+      "z_max_mm": 2.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "24"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 24,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.5,
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 72.5
+      },
+      "z_max_mm": 2.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "group_key": [
+        "id",
+        "34"
+      ],
+      "sample_count": 2,
+      "selected_charuco_id": 34,
+      "slope_x_mm_per_mm": 0.0,
+      "slope_y_mm_per_mm": 0.5,
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 101.5
+      },
+      "z_max_mm": 2.0,
+      "z_min_mm": 0.0
+    }
+  ],
+  "z_compensation_method": "grouped_same_corner_median_slope",
+  "z_compensation_mm_per_mm": [
+    0.0,
+    0.0
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "pyramid_height": {
+    "description": "Physical reference measurements of the printed pyramid height.",
+    "unit": "cm",
+    "nominal_height_mm": 14.0,
+    "observer_measurements": [
+      1.385,
+      1.375,
+      1.38,
+      1.38,
+      1.37
+    ]
+  }
+}

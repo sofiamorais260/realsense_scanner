@@ -1,0 +1,29 @@
+# Runtime dependencies for the RealSense 3D scanner application.
+# Version ranges are pinned to minor releases matching what is installed in
+# the project .venv (Python 3.12), to give reproducible installs while still
+# allowing patch-level bug fixes.
+
+# --- GUI -------------------------------------------------------------------
+PyQt5>=5.15,<5.16
+
+# --- Numerics / imaging ----------------------------------------------------
+numpy>=2.0,<3
+opencv-python>=4.10,<5
+matplotlib>=3.9,<4
+
+# --- Intel RealSense SDK (D405) -------------------------------------------
+pyrealsense2>=2.56,<3
+
+# --- Motion / I/O ----------------------------------------------------------
+# GRBL serial link (grbl_controller, joystick_controller)
+pyserial>=3.5,<4
+# Arduino Firmata joystick (joystick_controller)
+pyfirmata>=1.1,<2
+
+# --- 3D point cloud --------------------------------------------------------
+# Interactive point cloud viewer for tissue reconstruction
+open3d>=0.18,<1
+
+# --- Reporting -------------------------------------------------------------
+# PDF/HTML filter-validation reports (depth_profile/analysis.py)
+reportlab>=4.0,<5

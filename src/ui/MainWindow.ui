@@ -1,0 +1,2955 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOn</enum>
+      </property>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOn</enum>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>-945</x>
+         <y>0</y>
+         <width>2300</width>
+         <height>900</height>
+        </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>2300</width>
+         <height>900</height>
+        </size>
+       </property>
+       <widget class="QLabel" name="machine_calibration_label">
+        <property name="geometry">
+         <rect>
+          <x>1810</x>
+          <y>10</y>
+          <width>261</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Machine Calibration</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="machine_calib_group">
+        <property name="geometry">
+         <rect>
+          <x>1810</x>
+          <y>40</y>
+          <width>461</width>
+          <height>161</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QPushButton" name="machine_calibrate_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>80</y>
+           <width>191</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Calibrate Machine</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="machine_load_previous_calibration_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>20</y>
+           <width>191</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Load previous Calibration</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="machine_calibration_last_updated_value_label">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>20</y>
+           <width>241</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Last updated: -</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="machine_calibration_status_value_label">
+         <property name="geometry">
+          <rect>
+           <x>220</x>
+           <y>90</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Loaded: No</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="machine_calibration_error_value_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>130</y>
+           <width>421</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Residual RMSE: -</string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QLabel" name="grbl_jog_controller_label">
+        <property name="geometry">
+         <rect>
+          <x>1430</x>
+          <y>10</y>
+          <width>221</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Jog Controller</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="grbl_jog_controller_group">
+        <property name="geometry">
+         <rect>
+          <x>1430</x>
+          <y>40</y>
+          <width>361</width>
+          <height>391</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QLabel" name="grbl_position_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>321</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Scanner Position (from Home)</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_jog_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>190</y>
+           <width>211</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Jog</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_jog_step_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>240</y>
+           <width>121</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Step (mm)</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_x_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>60</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>X</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_x_value_label">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>60</y>
+           <width>71</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_y_value_label">
+         <property name="geometry">
+          <rect>
+           <x>130</x>
+           <y>60</y>
+           <width>61</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_z_label">
+         <property name="geometry">
+          <rect>
+           <x>200</x>
+           <y>60</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Z</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_z_value_label">
+         <property name="geometry">
+          <rect>
+           <x>220</x>
+           <y>60</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+        <widget class="QDoubleSpinBox" name="grbl_jog_step_spinbox">
+         <property name="geometry">
+          <rect>
+           <x>90</x>
+           <y>240</y>
+           <width>101</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="decimals">
+          <number>3</number>
+         </property>
+         <property name="minimum">
+          <double>0.001000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>50.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.500000000000000</double>
+         </property>
+         <property name="value">
+          <double>1.000000000000000</double>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_jog_x_negative_button">
+         <property name="geometry">
+          <rect>
+           <x>40</x>
+           <y>310</y>
+           <width>51</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>X-</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_jog_x_positive_button">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>310</y>
+           <width>51</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>X+</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_jog_y_positive_button">
+         <property name="geometry">
+          <rect>
+           <x>100</x>
+           <y>280</y>
+           <width>51</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Y+</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_jog_y_negative_button">
+         <property name="geometry">
+          <rect>
+           <x>100</x>
+           <y>340</y>
+           <width>51</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Y-</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_jog_z_positive_button">
+         <property name="geometry">
+          <rect>
+           <x>250</x>
+           <y>260</y>
+           <width>61</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Z+</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_jog_z_negative_button">
+         <property name="geometry">
+          <rect>
+           <x>250</x>
+           <y>320</y>
+           <width>61</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Z-</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_y_label">
+         <property name="geometry">
+          <rect>
+           <x>110</x>
+           <y>60</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Y</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_position_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>100</y>
+           <width>331</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Raw GRBL Machine Position (MPos)</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_x_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>150</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>X</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_x_value_label">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>150</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_y_label">
+         <property name="geometry">
+          <rect>
+           <x>90</x>
+           <y>150</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Y</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_y_value_label">
+         <property name="geometry">
+          <rect>
+           <x>110</x>
+           <y>150</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_z_label">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>150</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Z</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_work_z_value_label">
+         <property name="geometry">
+          <rect>
+           <x>180</x>
+           <y>150</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>-</string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QGroupBox" name="grbl_basic_control_group">
+        <property name="geometry">
+         <rect>
+          <x>1020</x>
+          <y>40</y>
+          <width>391</width>
+          <height>451</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QCheckBox" name="grbl_enabled_checkbox_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>20</y>
+           <width>151</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Enable GRBL</string>
+         </property>
+        </widget>
+        <widget class="QComboBox" name="grbl_port_combo_2">
+         <property name="geometry">
+          <rect>
+           <x>42</x>
+           <y>60</y>
+           <width>111</width>
+           <height>22</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_port_label_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>60</y>
+           <width>41</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Port:</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_refresh_ports_button_2">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>60</y>
+           <width>61</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Refresh</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_connect_button_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>110</y>
+           <width>121</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Connect GRBL</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_state_label_2">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>100</y>
+           <width>121</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <italic>true</italic>
+          </font>
+         </property>
+         <property name="text">
+          <string>Status: disabled</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="grbl_monitor_checkbox_2">
+         <property name="geometry">
+          <rect>
+           <x>180</x>
+           <y>20</y>
+           <width>151</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Show GRBL Monitor</string>
+         </property>
+        </widget>
+        <widget class="Line" name="grbl_line_2">
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>20</y>
+           <width>20</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_status_button_2">
+         <property name="geometry">
+          <rect>
+           <x>140</x>
+           <y>110</y>
+           <width>111</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Query Status</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_port_value_label_2">
+         <property name="geometry">
+          <rect>
+           <x>230</x>
+           <y>65</y>
+           <width>131</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <italic>true</italic>
+          </font>
+         </property>
+         <property name="text">
+          <string>Connected to: -</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_unlock_button_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>200</y>
+           <width>93</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Unlock</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_reset_button_2">
+         <property name="geometry">
+          <rect>
+           <x>140</x>
+           <y>200</y>
+           <width>93</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Soft Reset</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_tools_label_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>160</y>
+           <width>131</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Tool Box</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_set_work_home_button_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>360</y>
+           <width>171</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Save current as FOV Home</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_home_button_2">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>200</y>
+           <width>121</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Home Machine</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_go_work_home_button_2">
+         <property name="geometry">
+          <rect>
+           <x>200</x>
+           <y>360</y>
+           <width>171</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Go to Scanner FOV Home</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="grbl_limits_state_label_2">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>130</y>
+           <width>121</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <italic>true</italic>
+          </font>
+         </property>
+         <property name="text">
+          <string>Machine limits: not armed</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_reset_zero_button_2">
+         <property name="geometry">
+          <rect>
+           <x>12</x>
+           <y>250</y>
+           <width>161</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Reset GRBL Work Zero</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_return_zero_button_2">
+         <property name="geometry">
+          <rect>
+           <x>200</x>
+           <y>250</y>
+           <width>181</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Return to GRBL Work Zero</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_scanner_fov_button_2">
+         <property name="geometry">
+          <rect>
+           <x>100</x>
+           <y>410</y>
+           <width>171</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Recover to Scanner FOV</string>
+         </property>
+        </widget>
+        <widget class="Line" name="grbl_tools_line_2">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>340</y>
+           <width>351</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_emergency_stop_button_2">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>300</y>
+           <width>121</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Emergency STOP</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_hold_button_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>300</y>
+           <width>91</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Pause Motion</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="grbl_resume_button_2">
+         <property name="geometry">
+          <rect>
+           <x>140</x>
+           <y>300</y>
+           <width>91</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Resume</string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QLabel" name="grbl_basic_control_label">
+        <property name="geometry">
+         <rect>
+          <x>1020</x>
+          <y>10</y>
+          <width>221</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>GRBL Settings</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="imaging_settings_group">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>40</y>
+          <width>991</width>
+          <height>391</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QCheckBox" name="auto_exposure_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>60</y>
+           <width>131</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Auto Exposure</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <property name="autoRepeat">
+          <bool>false</bool>
+         </property>
+        </widget>
+        <widget class="QLabel" name="exposure_time_label_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>90</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Exp. time (ms)</string>
+         </property>
+        </widget>
+        <widget class="QSpinBox" name="exposure_time_ctrl_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>110</y>
+           <width>81</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>200</number>
+         </property>
+         <property name="value">
+          <number>20</number>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="auto_white_balance_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>150</y>
+           <width>151</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Auto White Balance</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="white_balance_label_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>180</y>
+           <width>101</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>White balance</string>
+         </property>
+        </widget>
+        <widget class="QSpinBox" name="white_balance_ctrl_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>210</y>
+           <width>81</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>2800</number>
+         </property>
+         <property name="maximum">
+          <number>6500</number>
+         </property>
+         <property name="singleStep">
+          <number>50</number>
+         </property>
+         <property name="value">
+          <number>4000</number>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_preset_label_3">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>190</y>
+           <width>161</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <weight>50</weight>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth preset</string>
+         </property>
+        </widget>
+        <widget class="Line" name="image_settings_line_3">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>20</y>
+           <width>20</width>
+           <height>251</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+        <widget class="QComboBox" name="depth_preset_ctrl_3">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>230</y>
+           <width>101</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <item>
+          <property name="text">
+           <string>Default</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Accuracy</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Density</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Medium Density</string>
+          </property>
+         </item>
+        </widget>
+        <widget class="QLabel" name="camera_controls_label_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>161</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Camera Controls</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_controls_label_3">
+         <property name="geometry">
+          <rect>
+           <x>180</x>
+           <y>0</y>
+           <width>161</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth Controls</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_gain_label_3">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>40</y>
+           <width>91</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <underline>false</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth gain</string>
+         </property>
+        </widget>
+        <widget class="QSpinBox" name="depth_gain_ctrl_3">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>80</y>
+           <width>71</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>16</number>
+         </property>
+         <property name="maximum">
+          <number>248</number>
+         </property>
+         <property name="value">
+          <number>16</number>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_display_mode_label_3">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>120</y>
+           <width>91</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>false</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth display</string>
+         </property>
+        </widget>
+        <widget class="QComboBox" name="depth_display_mode_ctrl_3">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>150</y>
+           <width>101</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <item>
+          <property name="text">
+           <string>Raw</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Gray</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Colorized</string>
+          </property>
+         </item>
+        </widget>
+        <widget class="Line" name="depth_line_3">
+         <property name="geometry">
+          <rect>
+           <x>330</x>
+           <y>40</y>
+           <width>20</width>
+           <height>341</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_filters_label_3">
+         <property name="geometry">
+          <rect>
+           <x>350</x>
+           <y>0</y>
+           <width>161</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>11</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth Filters</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="spatial_filter_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>370</x>
+           <y>50</y>
+           <width>111</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Spatial filter</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="spatial_alpha_label_3">
+         <property name="geometry">
+          <rect>
+           <x>370</x>
+           <y>80</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Alpha value</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="spatial_alpha_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>480</x>
+           <y>80</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>25</number>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="singleStep">
+          <number>5</number>
+         </property>
+         <property name="value">
+          <number>55</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="temporal_filter_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>370</x>
+           <y>170</y>
+           <width>111</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Temporal filter</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="temporal_alpha_label_3">
+         <property name="geometry">
+          <rect>
+           <x>350</x>
+           <y>200</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Alpha value</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="temporal_alpha_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>480</x>
+           <y>200</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>10</number>
+         </property>
+         <property name="maximum">
+          <number>100</number>
+         </property>
+         <property name="singleStep">
+          <number>5</number>
+         </property>
+         <property name="pageStep">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>40</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QLabel" name="spatial_alpha_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>450</x>
+           <y>80</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>55</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="spatial_delta_label_3">
+         <property name="geometry">
+          <rect>
+           <x>370</x>
+           <y>120</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Delta value</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="spatial_delta_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>480</x>
+           <y>120</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>50</number>
+         </property>
+         <property name="singleStep">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>20</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QLabel" name="spatial_delta_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>450</x>
+           <y>120</y>
+           <width>101</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>20</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="temporal_alpha_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>430</x>
+           <y>200</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>40</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="temporal_delta_label_3">
+         <property name="geometry">
+          <rect>
+           <x>350</x>
+           <y>240</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Delta value</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="temporal_delta_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>430</x>
+           <y>240</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>20</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="temporal_delta_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>480</x>
+           <y>240</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>50</number>
+         </property>
+         <property name="singleStep">
+          <number>1</number>
+         </property>
+         <property name="pageStep">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>20</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="hole_filling_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>370</x>
+           <y>320</y>
+           <width>121</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Hole filling filter</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="hole_filling_mode_label_3">
+         <property name="geometry">
+          <rect>
+           <x>370</x>
+           <y>360</y>
+           <width>61</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Mode</string>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="decimation_filter_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>660</x>
+           <y>20</y>
+           <width>141</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Decimation filter</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="threshold_min_label_3">
+         <property name="geometry">
+          <rect>
+           <x>660</x>
+           <y>130</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Min (mm)</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="decimation_magnitude_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>760</x>
+           <y>50</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>8</number>
+         </property>
+         <property name="singleStep">
+          <number>1</number>
+         </property>
+         <property name="pageStep">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>2</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QLabel" name="decimation_magnitude_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>730</x>
+           <y>50</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>2</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="hole_filling_mode_value_help_label_3">
+         <property name="geometry">
+          <rect>
+           <x>490</x>
+           <y>360</y>
+           <width>461</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>7</pointsize>
+           <italic>true</italic>
+          </font>
+         </property>
+         <property name="text">
+          <string> (Pixel -&gt; 0- fill from left; 1 - farthest from around; 2 - nearest from around)</string>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="threshold_filter_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>660</x>
+           <y>100</y>
+           <width>141</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Threshold filter</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="decimation_magnitude_label_3">
+         <property name="geometry">
+          <rect>
+           <x>660</x>
+           <y>50</y>
+           <width>71</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Magnitude</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="threshold_min_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>770</x>
+           <y>130</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>50</number>
+         </property>
+         <property name="maximum">
+          <number>180</number>
+         </property>
+         <property name="singleStep">
+          <number>10</number>
+         </property>
+         <property name="pageStep">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>130</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QLabel" name="threshold_min_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>730</x>
+           <y>130</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>130</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="threshold_max_label_3">
+         <property name="geometry">
+          <rect>
+           <x>660</x>
+           <y>170</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Max (mm)</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="threshold_max_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>730</x>
+           <y>170</y>
+           <width>41</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>150</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="threshold_max_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>770</x>
+           <y>170</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>100</number>
+         </property>
+         <property name="maximum">
+          <number>300</number>
+         </property>
+         <property name="singleStep">
+          <number>10</number>
+         </property>
+         <property name="pageStep">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>150</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QPlainTextEdit" name="default_filters_value_2ndtext_3">
+         <property name="geometry">
+          <rect>
+           <x>800</x>
+           <y>240</y>
+           <width>181</width>
+           <height>101</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>7</pointsize>
+          </font>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="plainText">
+          <string>Decimation - magnitude: 2
+
+Threshold - min: 130
+                -max: 150
+
+Hole filling - mode: 1</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="default_filters_label_3">
+         <property name="geometry">
+          <rect>
+           <x>810</x>
+           <y>220</y>
+           <width>161</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>7</pointsize>
+           <weight>75</weight>
+           <italic>true</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Default Filters Values</string>
+         </property>
+        </widget>
+        <widget class="QPlainTextEdit" name="default_filters_value_1sttext_3">
+         <property name="geometry">
+          <rect>
+           <x>630</x>
+           <y>220</y>
+           <width>171</width>
+           <height>121</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>7</pointsize>
+          </font>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="plainText">
+          <string>Spatial - alpha: 55
+           - delta: 20
+
+
+Temporal - alpha: 40
+               - delta: 20
+               -persistency :8</string>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="depth_visualization_histogram_checkbox_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>300</y>
+           <width>231</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Histogram Equalization enabled</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_visualization_label_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>260</y>
+           <width>161</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+           <underline>false</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth Visualization</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_visualization_min_distance_label_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>330</y>
+           <width>121</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Min. distance (mm)</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="depth_visualization_min_distance_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>170</x>
+           <y>330</y>
+           <width>160</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="minimum">
+          <number>50</number>
+         </property>
+         <property name="maximum">
+          <number>160</number>
+         </property>
+         <property name="singleStep">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>100</number>
+         </property>
+         <property name="sliderPosition">
+          <number>100</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_visualization_min_distance_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>130</x>
+           <y>330</y>
+           <width>31</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>100</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_visualization_max_distance_label_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>360</y>
+           <width>121</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Max. distance (mm)</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="depth_visualization_max_distance_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>130</x>
+           <y>360</y>
+           <width>41</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>160</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="depth_visualization_max_distance_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>170</x>
+           <y>360</y>
+           <width>160</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>100</number>
+         </property>
+         <property name="maximum">
+          <number>300</number>
+         </property>
+         <property name="singleStep">
+          <number>10</number>
+         </property>
+         <property name="pageStep">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>160</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+        <widget class="QComboBox" name="hole_filling_mode_value_combobox_3">
+         <property name="geometry">
+          <rect>
+           <x>420</x>
+           <y>360</y>
+           <width>73</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="currentIndex">
+          <number>1</number>
+         </property>
+         <item>
+          <property name="text">
+           <string>0</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>2</string>
+          </property>
+         </item>
+        </widget>
+        <widget class="QLabel" name="temporal_persistency_label_3">
+         <property name="geometry">
+          <rect>
+           <x>350</x>
+           <y>280</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Persistency index</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="temporal_persistency_value_label_3">
+         <property name="geometry">
+          <rect>
+           <x>460</x>
+           <y>280</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+           <weight>75</weight>
+           <italic>false</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>8</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="temporal_persistency_slider_3">
+         <property name="geometry">
+          <rect>
+           <x>480</x>
+           <y>280</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="minimum">
+          <number>0</number>
+         </property>
+         <property name="maximum">
+          <number>8</number>
+         </property>
+         <property name="singleStep">
+          <number>1</number>
+         </property>
+         <property name="pageStep">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>8</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QLabel" name="roi_settings_label">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>450</y>
+          <width>161</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>ROI Settings</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="imaging_settings_label">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>10</y>
+          <width>221</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Image Settings</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="calibration_group">
+        <property name="geometry">
+         <rect>
+          <x>700</x>
+          <y>500</y>
+          <width>711</width>
+          <height>131</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QPushButton" name="calibrate_xy_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>50</y>
+           <width>121</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Calibrate XY scale</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="calibrate_z_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>90</y>
+           <width>121</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Calibrate Z scale</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_status_value_label">
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>50</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Loaded: No</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_xy_scale_value_label">
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>70</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>XY scale: - </string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_z_scale_value_label">
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>90</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Z scale: - </string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_plane_offset_value_label">
+         <property name="geometry">
+          <rect>
+           <x>150</x>
+           <y>110</y>
+           <width>181</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Plane offset: - </string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_last_updated_value_label">
+         <property name="geometry">
+          <rect>
+           <x>460</x>
+           <y>10</y>
+           <width>241</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Last updated:</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_xy_source_value_label">
+         <property name="geometry">
+          <rect>
+           <x>350</x>
+           <y>70</y>
+           <width>341</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>XY Source: -</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_z_source_value_label">
+         <property name="geometry">
+          <rect>
+           <x>350</x>
+           <y>90</y>
+           <width>341</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Z Source: -</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="calibration_group_label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>0</y>
+           <width>231</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Image Calibration</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="load_previous_calibration_button">
+         <property name="geometry">
+          <rect>
+           <x>330</x>
+           <y>10</y>
+           <width>121</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Load previous calib</string>
+         </property>
+        </widget>
+        <widget class="Line" name="calibration_line">
+         <property name="geometry">
+          <rect>
+           <x>310</x>
+           <y>10</y>
+           <width>20</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QGroupBox" name="roi_settings">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>490</y>
+          <width>211</width>
+          <height>141</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QComboBox" name="roi_mode_select">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>81</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="currentText">
+          <string>Manual</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Manual</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Auto</string>
+          </property>
+         </item>
+        </widget>
+        <widget class="QPushButton" name="set_roi_button">
+         <property name="geometry">
+          <rect>
+           <x>100</x>
+           <y>10</y>
+           <width>93</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Set ROI</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="reset_roi_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>50</y>
+           <width>181</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Reset ROI</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="lock_roi_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>80</y>
+           <width>181</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Lock ROI</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="unlock_roi_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>110</y>
+           <width>181</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Unlock ROI</string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QGroupBox" name="roi_analysis_group">
+        <property name="geometry">
+         <rect>
+          <x>240</x>
+          <y>540</y>
+          <width>441</width>
+          <height>91</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QPushButton" name="depth_profile_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>93</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Depth Profile</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="capture_roi_validation_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>50</y>
+           <width>231</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Run Capture Depth Profile + Save</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="depth_profile_analysis_button">
+         <property name="geometry">
+          <rect>
+           <x>110</x>
+           <y>10</y>
+           <width>131</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Analyze Depth Profile</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="Preset_Filter_suggestion_button">
+         <property name="geometry">
+          <rect>
+           <x>250</x>
+           <y>10</y>
+           <width>171</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Preset + Filter Suggestion</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="topography_map_button">
+         <property name="geometry">
+          <rect>
+           <x>250</x>
+           <y>50</y>
+           <width>171</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Topography Map</string>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QLabel" name="roi_analysis_label">
+        <property name="geometry">
+         <rect>
+          <x>240</x>
+          <y>500</y>
+          <width>161</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>ROI Analysis</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="control_joystick_label">
+        <property name="geometry">
+         <rect>
+          <x>1440</x>
+          <y>440</y>
+          <width>221</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Control Joystick</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="joystick_control_group">
+        <property name="geometry">
+         <rect>
+          <x>1430</x>
+          <y>480</y>
+          <width>361</width>
+          <height>151</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QCheckBox" name="joystick_enable_checkbox">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>120</y>
+           <width>181</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Enable Joystick Jog</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="joystick_port_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>10</y>
+           <width>81</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Joystick Port:</string>
+         </property>
+        </widget>
+        <widget class="QComboBox" name="joystick_port_combo">
+         <property name="geometry">
+          <rect>
+           <x>110</x>
+           <y>10</y>
+           <width>141</width>
+           <height>22</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="joystick_refresh_ports_button">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>10</y>
+           <width>61</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Refresh</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="joystick_port_value_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>40</y>
+           <width>131</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <italic>true</italic>
+          </font>
+         </property>
+         <property name="text">
+          <string>Connected to: -</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="joystick_connect_button">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>70</y>
+           <width>121</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Connect Joystick</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="joystick_status_label">
+         <property name="geometry">
+          <rect>
+           <x>170</x>
+           <y>70</y>
+           <width>181</width>
+           <height>31</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <italic>true</italic>
+          </font>
+         </property>
+         <property name="text">
+          <string>Status: disabled</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="joystick_monitor_checkbox">
+         <property name="geometry">
+          <rect>
+           <x>200</x>
+           <y>120</y>
+           <width>151</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Show Joystick Monitor</string>
+         </property>
+        </widget>
+        <widget class="Line" name="joystick_line">
+         <property name="geometry">
+          <rect>
+           <x>170</x>
+           <y>120</y>
+           <width>20</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </widget>
+       <widget class="QLabel" name="raster_label">
+        <property name="geometry">
+         <rect>
+          <x>1820</x>
+          <y>220</y>
+          <width>261</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>14</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Auto Raster Scan</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="raster_groupBox">
+        <property name="geometry">
+         <rect>
+          <x>1820</x>
+          <y>260</y>
+          <width>451</width>
+          <height>171</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QPushButton" name="automatic_raster_scan_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>90</y>
+           <width>151</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Raster Scan </string>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="roi_trackingcheckBox">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>121</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>ROI tracking</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="reconstruct_3Dimage_Button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>130</y>
+           <width>151</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Reconstruct 3D image</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="automatic_raster_scan_fixed_Z_button">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>50</y>
+           <width>151</width>
+           <height>28</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Raster Scan Fixed Z</string>
+         </property>
+        </widget>
+        <widget class="Line" name="auto_raster_line">
+         <property name="geometry">
+          <rect>
+           <x>200</x>
+           <y>10</y>
+           <width>16</width>
+           <height>151</height>
+          </rect>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1400</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QToolBar" name="toolBar_2">
+   <property name="windowTitle">
+    <string>toolBar_2</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,8 @@
+{
+  "_comment": "Optional manual Firmata analog pin mapping for the joystick axes. Edit these pin numbers if auto-detect picks the wrong axis.",
+  "axis_pin_mapping": {
+    "x": 0,
+    "y": 5,
+    "z": 2
+  }
+}

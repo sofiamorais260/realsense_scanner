@@ -1,0 +1,138 @@
+{
+  "board_spec": {
+    "type": "charuco",
+    "squares_x": 6,
+    "squares_y": 8,
+    "square_length_mm": 14.5,
+    "marker_length_mm": 10.633333333333333,
+    "dictionary_name": "DICT_4X4_50"
+  },
+  "xy_homography": [
+    [
+      -0.019140984578120638,
+      0.5623937557318148,
+      -89.24432300703077
+    ],
+    [
+      -0.5623919668540407,
+      -0.022346032066925772,
+      244.1053125780906
+    ],
+    [
+      1.683675576795905e-05,
+      -1.7542741511770804e-05,
+      1.0
+    ]
+  ],
+  "xy_scale_mm_per_px": 0.5626915246248245,
+  "board_center_px": [
+    348.8119812011719,
+    242.26174926757812
+  ],
+  "xy_charuco_corner_count": 35,
+  "xy_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "xy_scale_mean_mm_per_px": 0.5626997277140617,
+    "xy_scale_std_mm_per_px": 4.629331563470286e-05,
+    "xy_scale_median_mm_per_px": 0.5626915246248245,
+    "xy_residual_rmse_mean_mm": 0.08352380866805713,
+    "xy_residual_rmse_best_mm": 0.08022057265043259,
+    "xy_residual_rmse_worst_mm": 0.08791954070329666,
+    "xy_residual_max_error_mean_mm": 0.13702546308437982,
+    "xy_corner_count_mean": 35.0,
+    "recommended_action": "save"
+  },
+  "timestamp": "2026-03-30T17:26:04",
+  "latest_calibration_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration_results\\scan_space\\latest_scan_space_calibration.json",
+  "saved_calibration_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration_results\\scan_space\\history\\scan_space_calibration_20260330_172604.json",
+  "plane_model": {
+    "coefficients": [
+      0.010115808807313442,
+      -0.008624173700809479,
+      0.9999116659164429,
+      -224.8226776123047
+    ],
+    "reference": "camera_xyz_mm"
+  },
+  "plane_offset_mm": 224.7132339477539,
+  "z_plane_reference": "charuco_board_only",
+  "z_plane_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "plane_offset_mean_mm": 224.71341832478842,
+    "plane_offset_std_mm": 0.02635401339133574,
+    "plane_fit_rmse_mean_mm": 0.3774431616840686,
+    "plane_fit_rmse_best_mm": 0.33371227960182515,
+    "plane_fit_rmse_worst_mm": 0.4447651372348857,
+    "board_point_count_mean": 5000.0,
+    "recommended_action": "save",
+    "recommendation_reason": "batch is stable"
+  },
+  "z_scale": 1.0728591075835128,
+  "z_bias_mm": -0.030282845793519073,
+  "z_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "z_scale_sample_mean": 1.070614899927429,
+    "z_scale_sample_std": 0.020476475723339937,
+    "z_bias_sample_mean_mm": -0.040970723358741884,
+    "z_bias_sample_std_mm": 0.05572189255865406,
+    "plane_offset_mm": 224.7132339477539,
+    "sample_fit_rmse_mean_mm": 0.18101707133465605,
+    "sample_fit_rmse_best_mm": 0.0043549234955064095,
+    "sample_fit_rmse_worst_mm": 0.6708954756692594,
+    "aggregated_fit_rmse_mm": 0.09062717705909461,
+    "fit_mode": "tray_plus_top_two_steps",
+    "recommended_action": "save",
+    "recommendation_reason": "batch is stable"
+  },
+  "staircase_reference_heights_mm": [
+    9.9,
+    14.8,
+    19.9
+  ],
+  "measured_plateau_heights_raw_mm": [
+    0.8708076477050781,
+    13.937782287597656,
+    18.490379333496094
+  ],
+  "plateau_residuals_mm": [
+    0.030282845793519073,
+    -0.1229938209717929,
+    0.09271097517827087
+  ],
+  "staircase_roi_xywh": [
+    374,
+    187,
+    94,
+    98
+  ],
+  "detected_plateaus": [
+    {
+      "seed_height_mm": 1.1,
+      "measured_height_mm": 0.8519744873046875,
+      "pixel_count": 882
+    },
+    {
+      "seed_height_mm": 13.9,
+      "measured_height_mm": 13.939895629882812,
+      "pixel_count": 369
+    },
+    {
+      "seed_height_mm": 18.700000000000003,
+      "measured_height_mm": 18.75566864013672,
+      "pixel_count": 1026
+    }
+  ],
+  "z_scale_reference": "top_two_staircase_plateaus_relative_to_fitted_board_plane",
+  "z_scale_placement_warning": "Staircase placement and ROI edge contamination can introduce small error.",
+  "used_reference_heights_mm": [
+    14.8,
+    19.9
+  ],
+  "used_measured_plateau_heights_raw_mm": [
+    13.937782287597656,
+    18.490379333496094
+  ]
+}

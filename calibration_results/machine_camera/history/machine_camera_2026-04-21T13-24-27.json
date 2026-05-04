@@ -1,0 +1,393 @@
+{
+  "alignment_sample_count": 9,
+  "alignment_samples": [
+    {
+      "machine_point_mm": {
+        "x": 104.0,
+        "y": 147.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 4,
+      "selected_pixel_xy": [
+        194,
+        157
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 141.0,
+        "y": 146.0,
+        "z": 5.0
+      },
+      "selected_charuco_id": 19,
+      "selected_pixel_xy": [
+        306,
+        96
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 177.0,
+        "y": 147.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 34,
+      "selected_pixel_xy": [
+        419,
+        92
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 177.0,
+        "y": 117.0,
+        "z": 6.0
+      },
+      "selected_charuco_id": 32,
+      "selected_pixel_xy": [
+        420,
+        169
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 142.0,
+        "y": 116.0,
+        "z": 6.0
+      },
+      "selected_charuco_id": 17,
+      "selected_pixel_xy": [
+        306,
+        94
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 105.0,
+        "y": 118.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 2,
+      "selected_pixel_xy": [
+        194,
+        94
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 107.0,
+        "y": 85.0,
+        "z": 9.0
+      },
+      "selected_charuco_id": 0,
+      "selected_pixel_xy": [
+        195,
+        173
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 141.0,
+        "y": 88.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 15,
+      "selected_pixel_xy": [
+        306,
+        87
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 177.0,
+        "y": 89.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 30,
+      "selected_pixel_xy": [
+        419,
+        93
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 101.5
+      }
+    }
+  ],
+  "board_center_mm": [
+    36.25,
+    50.75
+  ],
+  "board_center_px": [
+    288.2466125488281,
+    247.18284606933594
+  ],
+  "board_spec": {
+    "dictionary_name": "DICT_4X4_50",
+    "marker_length_mm": 10.633333333333333,
+    "square_length_mm": 14.5,
+    "squares_x": 6,
+    "squares_y": 8,
+    "type": "charuco"
+  },
+  "reference_machine_z_mm": 2.0,
+  "reference_scanner_position_mm": {
+    "x": 40.0,
+    "y": 170.0,
+    "z": 2.0
+  },
+  "timestamp": "2026-04-21T13:24:27",
+  "tray_plane_fit_rmse_mm": 0.1353794139630452,
+  "tray_plane_model_camera": {
+    "coefficients": [
+      0.003605462843552232,
+      0.0036089993081986904,
+      0.999987006187439,
+      -151.4084014892578
+    ],
+    "reference": "camera_xyz_mm"
+  },
+  "tray_plane_offset_mm": 151.45504760742188,
+  "tray_surface_machine_z_mm": 2.0,
+  "tray_surface_z_max_mm": 7.0,
+  "tray_surface_z_residuals_mm": [
+    0.0,
+    3.0,
+    0.0,
+    4.0,
+    4.0,
+    0.0,
+    7.0,
+    0.0,
+    0.0
+  ],
+  "tray_surface_z_rmse_mm": 3.1622776601683795,
+  "tray_to_machine_max_mm": 0.8349959820356222,
+  "tray_to_machine_mean_mm": 0.4594128130628461,
+  "tray_to_machine_residuals_mm": [
+    0.4705900661691741,
+    0.11099686648147462,
+    0.8189810488746063,
+    0.8349959820356222,
+    0.35617948845091213,
+    0.49218382947694456,
+    0.323349272444933,
+    0.4607191546607399,
+    0.26671960897120783
+  ],
+  "tray_to_machine_rmse_mm": 0.5119449356718693,
+  "tray_to_machine_rotation_degrees": 90.67484226196423,
+  "tray_to_machine_rotation_matrix_xy": [
+    [
+      -0.011936339522545457,
+      0.8264073091659316
+    ],
+    [
+      1.0133779264214047,
+      0.006688963210703003
+    ]
+  ],
+  "tray_to_machine_translation_mm": [
+    93.3482905982906,
+    73.36622073578602
+  ],
+  "type": "tray_machine_roi_mapping",
+  "validation": {
+    "detected_plateaus": [
+      {
+        "measured_height_mm": 8.783645629882812,
+        "pixel_count": 2996,
+        "seed_height_mm": 8.7
+      },
+      {
+        "measured_height_mm": 18.382652282714844,
+        "pixel_count": 2504,
+        "seed_height_mm": 18.3
+      },
+      {
+        "measured_height_mm": 28.642745971679688,
+        "pixel_count": 3304,
+        "seed_height_mm": 28.500000000000004
+      },
+      {
+        "measured_height_mm": 38.64378356933594,
+        "pixel_count": 1600,
+        "seed_height_mm": 38.7
+      }
+    ],
+    "measured_plateau_heights_raw_mm": [
+      8.783645629882812,
+      18.382652282714844,
+      28.642745971679688,
+      38.64378356933594
+    ],
+    "plane_model": {
+      "coefficients": [
+        0.003605462843552232,
+        0.0036089993081986904,
+        0.999987006187439,
+        -151.4084014892578
+      ],
+      "reference": "camera_xyz_mm"
+    },
+    "plane_offset_mm": 151.3836212158203,
+    "plateau_residuals_mm": [
+      -0.21397004797896638,
+      0.07430016219818114,
+      0.33531965850813705,
+      -0.0743879307017572,
+      -0.12126184202560353
+    ],
+    "reference_scanner_position_mm": {
+      "x": 40.0,
+      "y": 170.0,
+      "z": 2.0
+    },
+    "staircase_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "staircase_roi_xywh": [
+      236,
+      187,
+      164,
+      163
+    ],
+    "used_measured_plateau_heights_raw_mm": [
+      8.783645629882812,
+      18.382652282714844,
+      28.642745971679688,
+      38.64378356933594
+    ],
+    "used_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "validation_direct_residuals_mm": [
+      0.4163543701171868,
+      0.8173477172851555,
+      0.5572540283203118,
+      0.6562164306640597
+    ],
+    "validation_max_mm": 0.8173477172851555,
+    "validation_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "validation_rmse_mm": 0.6289992663786714,
+    "z_bias_mm": 0.21397004797896638,
+    "z_scale": 1.014582118329579
+  },
+  "validation_reference": {
+    "reference_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\src\\config\\machine_validation_reference.json",
+    "staircase_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ]
+  },
+  "working_offset_mm": 0.0,
+  "xy_charuco_corner_count": 35,
+  "xy_homography": [
+    [
+      -0.006260712063630897,
+      -0.38631826994234847,
+      133.9065338446615
+    ],
+    [
+      0.3887384923277831,
+      -0.0062490739320226595,
+      -59.25297583695856
+    ],
+    [
+      2.9630565983681366e-05,
+      5.697188847836458e-06,
+      1.0
+    ]
+  ],
+  "xy_scale_mm_per_px": 0.38312603533267975,
+  "xy_validation": {
+    "xy_residual_max_mm": 0.19486354291439056,
+    "xy_residual_rmse_mm": 0.09346338361501694,
+    "xy_residual_samples_mm": [
+      0.11647053062915802,
+      0.08745254576206207,
+      0.05785871669650078,
+      0.06756477057933807,
+      0.1432885080575943,
+      0.030290059745311737,
+      0.044688403606414795,
+      0.11773251742124557,
+      0.06421452760696411,
+      0.09996901452541351,
+      0.08048280328512192,
+      0.13240496814250946,
+      0.07045606523752213,
+      0.13744816184043884,
+      0.09913943707942963,
+      0.0956830084323883,
+      0.03607789799571037,
+      0.03897494822740555,
+      0.05242876335978508,
+      0.05946078523993492,
+      0.026604901999235153,
+      0.043996017426252365,
+      0.0987694188952446,
+      0.06972251087427139,
+      0.17144209146499634,
+      0.08528793603181839,
+      0.1219877377152443,
+      0.10620113462209702,
+      0.06991966813802719,
+      0.07026536017656326,
+      0.06982167810201645,
+      0.021469593048095703,
+      0.06084944307804108,
+      0.11096227169036865,
+      0.19486354291439056
+    ]
+  },
+  "z_compensation_mm_per_mm": [
+    0.23076923076922362,
+    -0.41806020066890237
+  ]
+}

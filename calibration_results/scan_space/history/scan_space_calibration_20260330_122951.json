@@ -1,0 +1,82 @@
+{
+  "board_spec": {
+    "type": "charuco",
+    "squares_x": 6,
+    "squares_y": 8,
+    "square_length_mm": 14.5,
+    "marker_length_mm": 10.633333333333333,
+    "dictionary_name": "DICT_4X4_50"
+  },
+  "xy_homography": [
+    [
+      -0.019140984578120638,
+      0.5623937557318148,
+      -89.24432300703077
+    ],
+    [
+      -0.5623919668540407,
+      -0.022346032066925772,
+      244.1053125780906
+    ],
+    [
+      1.683675576795905e-05,
+      -1.7542741511770804e-05,
+      1.0
+    ]
+  ],
+  "xy_scale_mm_per_px": 0.5626915246248245,
+  "board_center_px": [
+    338.03131103515625,
+    239.6322021484375
+  ],
+  "xy_charuco_corner_count": 35,
+  "xy_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "xy_scale_mean_mm_per_px": 0.5626997277140617,
+    "xy_scale_std_mm_per_px": 4.629331563470286e-05,
+    "xy_scale_median_mm_per_px": 0.5626915246248245,
+    "xy_residual_rmse_mean_mm": 0.08352380866805713,
+    "xy_residual_rmse_best_mm": 0.08022057265043259,
+    "xy_residual_rmse_worst_mm": 0.08791954070329666,
+    "xy_residual_max_error_mean_mm": 0.13702546308437982,
+    "xy_corner_count_mean": 35.0,
+    "recommended_action": "save"
+  },
+  "timestamp": "2026-03-30T12:29:51",
+  "latest_calibration_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration_results\\scan_space\\latest_scan_space_calibration.json",
+  "saved_calibration_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration_results\\scan_space\\history\\scan_space_calibration_20260330_122951.json",
+  "plane_model": {
+    "coefficients": [
+      0.00924075860530138,
+      -0.004711758345365524,
+      0.9999462366104126,
+      -225.36473083496094
+    ],
+    "reference": "camera_xyz_mm"
+  },
+  "plane_offset_mm": 225.3491439819336,
+  "z_plane_reference": "charuco_board_only",
+  "z_plane_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "plane_offset_mean_mm": 225.34270222981772,
+    "plane_offset_std_mm": 0.06626224720886147,
+    "plane_fit_rmse_mean_mm": 0.748280052346188,
+    "plane_fit_rmse_best_mm": 0.6319907484559413,
+    "plane_fit_rmse_worst_mm": 0.8220513325981406,
+    "board_point_count_mean": 5000.0,
+    "recommended_action": "retry",
+    "recommendation_reason": "plane fit RMSE mean 0.7483 mm, plane offset std 0.0663 mm"
+  },
+  "z_scale": null,
+  "z_bias_mm": null,
+  "z_validation": null,
+  "staircase_reference_heights_mm": null,
+  "measured_plateau_heights_raw_mm": null,
+  "plateau_residuals_mm": null,
+  "staircase_roi_xywh": null,
+  "detected_plateaus": null,
+  "z_scale_reference": null,
+  "z_scale_placement_warning": null
+}

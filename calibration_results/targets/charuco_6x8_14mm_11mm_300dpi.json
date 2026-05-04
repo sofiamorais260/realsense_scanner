@@ -1,0 +1,31 @@
+{
+  "board_spec": {
+    "type": "charuco",
+    "squares_x": 6,
+    "squares_y": 8,
+    "square_length_mm": 14.5,
+    "marker_length_mm": 10.633333333333333,
+    "dictionary_name": "DICT_4X4_50"
+  },
+  "output_png": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration\\targets\\charuco_6x8_14mm_11mm_300dpi.png",
+  "page": {
+    "format": "A4",
+    "width_mm": 210.0,
+    "height_mm": 297.0,
+    "dpi": 300,
+    "margin_mm": 15.0
+  },
+  "board_size_mm": {
+    "width_mm": 87.0,
+    "height_mm": 116.0
+  },
+  "board_size_px": {
+    "width_px": 1028,
+    "height_px": 1370
+  },
+  "print_instructions": [
+    "Print at 100% scale.",
+    "Disable fit-to-page or shrink-to-fit.",
+    "Verify one printed square measures 14.500 mm."
+  ]
+}

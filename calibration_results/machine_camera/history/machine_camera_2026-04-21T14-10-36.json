@@ -1,0 +1,465 @@
+{
+  "alignment_sample_count": 13,
+  "alignment_samples": [
+    {
+      "machine_point_mm": {
+        "x": 106.0,
+        "y": 148.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 30,
+      "selected_pixel_xy": [
+        196,
+        157
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 143.0,
+        "y": 147.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 15,
+      "selected_pixel_xy": [
+        309,
+        97
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 178.0,
+        "y": 146.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 0,
+      "selected_pixel_xy": [
+        422,
+        96
+      ],
+      "tray_point_mm": {
+        "x": 14.5,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 166.0,
+        "y": 132.0,
+        "z": 3.0
+      },
+      "selected_charuco_id": 6,
+      "selected_pixel_xy": [
+        384,
+        95
+      ],
+      "tray_point_mm": {
+        "x": 29.0,
+        "y": 29.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 130.0,
+        "y": 132.0,
+        "z": 3.0
+      },
+      "selected_charuco_id": 21,
+      "selected_pixel_xy": [
+        271,
+        96
+      ],
+      "tray_point_mm": {
+        "x": 29.0,
+        "y": 72.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 105.0,
+        "y": 118.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 32,
+      "selected_pixel_xy": [
+        196,
+        134
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 142.0,
+        "y": 117.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 17,
+      "selected_pixel_xy": [
+        308,
+        94
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 178.0,
+        "y": 117.0,
+        "z": 2.0
+      },
+      "selected_charuco_id": 2,
+      "selected_pixel_xy": [
+        421,
+        94
+      ],
+      "tray_point_mm": {
+        "x": 43.5,
+        "y": 14.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 154.0,
+        "y": 98.0,
+        "z": 12.0
+      },
+      "selected_charuco_id": 13,
+      "selected_pixel_xy": [
+        346,
+        132
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 43.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 120.0,
+        "y": 98.0,
+        "z": 12.0
+      },
+      "selected_charuco_id": 28,
+      "selected_pixel_xy": [
+        233,
+        84
+      ],
+      "tray_point_mm": {
+        "x": 58.0,
+        "y": 87.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 105.0,
+        "y": 89.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 34,
+      "selected_pixel_xy": [
+        196,
+        122
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 101.5
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 141.0,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 19,
+      "selected_pixel_xy": [
+        308,
+        126
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 58.0
+      }
+    },
+    {
+      "machine_point_mm": {
+        "x": 178.0,
+        "y": 89.0,
+        "z": 0.0
+      },
+      "selected_charuco_id": 4,
+      "selected_pixel_xy": [
+        421,
+        100
+      ],
+      "tray_point_mm": {
+        "x": 72.5,
+        "y": 14.5
+      }
+    }
+  ],
+  "board_center_mm": [
+    36.25,
+    50.75
+  ],
+  "board_center_px": [
+    328.1709289550781,
+    212.49551391601562
+  ],
+  "board_spec": {
+    "dictionary_name": "DICT_4X4_50",
+    "marker_length_mm": 10.633333333333333,
+    "square_length_mm": 14.5,
+    "squares_x": 6,
+    "squares_y": 8,
+    "type": "charuco"
+  },
+  "reference_machine_z_mm": 2.0,
+  "reference_scanner_position_mm": {
+    "x": 40.0,
+    "y": 170.0,
+    "z": 2.0
+  },
+  "timestamp": "2026-04-21T14:10:36",
+  "tray_plane_fit_rmse_mm": 0.2818282129881933,
+  "tray_plane_model_camera": {
+    "coefficients": [
+      0.004003852605819702,
+      -0.0026888728607445955,
+      0.9999883770942688,
+      -151.537353515625
+    ],
+    "reference": "camera_xyz_mm"
+  },
+  "tray_plane_offset_mm": 151.50997924804688,
+  "tray_surface_machine_z_mm": 2.0,
+  "tray_surface_z_max_mm": 10.0,
+  "tray_surface_z_residuals_mm": [
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    10.0,
+    10.0,
+    2.0,
+    2.0,
+    2.0
+  ],
+  "tray_surface_z_rmse_mm": 4.057282152074029,
+  "tray_to_machine_max_mm": 1.1288502822172193,
+  "tray_to_machine_mean_mm": 0.6565623142730779,
+  "tray_to_machine_residuals_mm": [
+    0.5932218435575278,
+    0.8255525775564656,
+    0.6531594484109378,
+    0.5248047964171696,
+    0.10943611073089095,
+    0.7065769149870154,
+    0.635851624027671,
+    0.2010425010652365,
+    1.0446273430855277,
+    1.1288502822172193,
+    0.6627886139475783,
+    0.7998067784212086,
+    0.6495912511255624
+  ],
+  "tray_to_machine_rmse_mm": 0.7102511363119977,
+  "tray_to_machine_rotation_degrees": -90.65413743957424,
+  "tray_to_machine_rotation_matrix_xy": [
+    [
+      -0.011565787514282484,
+      -0.8306480008573027
+    ],
+    [
+      -1.013001212192064,
+      0.0095639309537634
+    ]
+  ],
+  "tray_to_machine_translation_mm": [
+    190.51977236953624,
+    161.12599588327885
+  ],
+  "type": "tray_machine_roi_mapping",
+  "validation": {
+    "detected_plateaus": [
+      {
+        "measured_height_mm": 9.085121154785156,
+        "pixel_count": 1356,
+        "seed_height_mm": 9.3
+      },
+      {
+        "measured_height_mm": 18.772537231445312,
+        "pixel_count": 1629,
+        "seed_height_mm": 18.500000000000004
+      },
+      {
+        "measured_height_mm": 28.892578125,
+        "pixel_count": 940,
+        "seed_height_mm": 28.700000000000003
+      },
+      {
+        "measured_height_mm": 38.498565673828125,
+        "pixel_count": 1181,
+        "seed_height_mm": 38.50000000000001
+      }
+    ],
+    "measured_plateau_heights_raw_mm": [
+      9.085121154785156,
+      18.772537231445312,
+      28.892578125,
+      38.498565673828125
+    ],
+    "plane_model": {
+      "coefficients": [
+        0.004003852605819702,
+        -0.0026888728607445955,
+        0.9999883770942688,
+        -151.537353515625
+      ],
+      "reference": "camera_xyz_mm"
+    },
+    "plane_offset_mm": 151.45310974121094,
+    "plateau_residuals_mm": [
+      0.022337154861156717,
+      -0.030933211490729917,
+      0.10235410725168137,
+      -0.20499049621313858,
+      0.1112324455910425
+    ],
+    "reference_scanner_position_mm": {
+      "x": 40.0,
+      "y": 170.0,
+      "z": 2.0
+    },
+    "staircase_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "staircase_roi_xywh": [
+      268,
+      107,
+      158,
+      158
+    ],
+    "used_measured_plateau_heights_raw_mm": [
+      9.085121154785156,
+      18.772537231445312,
+      28.892578125,
+      38.498565673828125
+    ],
+    "used_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "validation_direct_residuals_mm": [
+      0.11487884521484304,
+      0.4274627685546868,
+      0.3074218749999993,
+      0.8014343261718722
+    ],
+    "validation_max_mm": 0.8014343261718722,
+    "validation_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ],
+    "validation_rmse_mm": 0.4828888992235718,
+    "z_bias_mm": -0.022337154861156717,
+    "z_scale": 1.0185081969411234
+  },
+  "validation_reference": {
+    "reference_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\src\\config\\machine_validation_reference.json",
+    "staircase_reference_heights_mm": [
+      9.2,
+      19.2,
+      29.2,
+      39.3
+    ]
+  },
+  "working_offset_mm": 0.0,
+  "xy_charuco_corner_count": 35,
+  "xy_homography": [
+    [
+      0.004080255295185793,
+      0.3858093302096417,
+      -46.75828043690145
+    ],
+    [
+      -0.384886602105561,
+      0.0019568358265079394,
+      177.08166982265345
+    ],
+    [
+      2.570904752072158e-05,
+      9.936048742379868e-07,
+      1.0
+    ]
+  ],
+  "xy_scale_mm_per_px": 0.38267621397972107,
+  "xy_validation": {
+    "xy_residual_max_mm": 0.16746152937412262,
+    "xy_residual_rmse_mm": 0.08541368693113327,
+    "xy_residual_samples_mm": [
+      0.10299713164567947,
+      0.05426115542650223,
+      0.04132106155157089,
+      0.10660570859909058,
+      0.10209532827138901,
+      0.07603548467159271,
+      0.0668148621916771,
+      0.053399521857500076,
+      0.018631111830472946,
+      0.025355026125907898,
+      0.0600886344909668,
+      0.11135828495025635,
+      0.06635461002588272,
+      0.02078050747513771,
+      0.16717538237571716,
+      0.029756952077150345,
+      0.10629724711179733,
+      0.06664586812257767,
+      0.08782293647527695,
+      0.12474378198385239,
+      0.04492857679724693,
+      0.0789903923869133,
+      0.14271560311317444,
+      0.09003940969705582,
+      0.08298614621162415,
+      0.10098046064376831,
+      0.12914913892745972,
+      0.05047076195478439,
+      0.030709804967045784,
+      0.03795132786035538,
+      0.08421016484498978,
+      0.02831064723432064,
+      0.027065888047218323,
+      0.05845954641699791,
+      0.16746152937412262
+    ]
+  },
+  "z_compensation_mm_per_mm": [
+    0.13075029261005588,
+    -0.49981030794692577
+  ]
+}

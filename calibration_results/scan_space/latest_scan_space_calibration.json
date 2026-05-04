@@ -1,0 +1,152 @@
+{
+  "board_spec": {
+    "type": "charuco",
+    "squares_x": 6,
+    "squares_y": 8,
+    "square_length_mm": 14.5,
+    "marker_length_mm": 10.633333333333333,
+    "dictionary_name": "DICT_4X4_50"
+  },
+  "xy_homography": [
+    [
+      0.0028450308531123986,
+      0.3939611217945124,
+      -47.70424420829983
+    ],
+    [
+      -0.39078991389812834,
+      -0.00051337200447084,
+      159.72384637134417
+    ],
+    [
+      7.129052483134469e-05,
+      2.4990992168625635e-05,
+      0.9999999999999999
+    ]
+  ],
+  "xy_scale_mm_per_px": 0.3841526359319687,
+  "board_center_px": [
+    275.3332824707031,
+    213.411376953125
+  ],
+  "xy_charuco_corner_count": 35,
+  "xy_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "xy_scale_mean_mm_per_px": 0.3841513569156329,
+    "xy_scale_std_mm_per_px": 1.3381259115317552e-05,
+    "xy_scale_median_mm_per_px": 0.3841526359319687,
+    "xy_residual_rmse_mean_mm": 0.06625267242391904,
+    "xy_residual_rmse_best_mm": 0.06368139386177063,
+    "xy_residual_rmse_worst_mm": 0.06825406104326248,
+    "xy_residual_max_error_mean_mm": 0.13967207508782545,
+    "xy_corner_count_mean": 35.0,
+    "recommended_action": "save",
+    "recommendation_reason": "batch is stable"
+  },
+  "timestamp": "2026-04-23T19:37:44",
+  "latest_calibration_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration_results\\scan_space\\latest_scan_space_calibration.json",
+  "saved_calibration_file": "C:\\Users\\Sofia\\Projects\\realsense_scanner\\calibration_results\\scan_space\\history\\scan_space_calibration_20260423_193744.json",
+  "plane_model": {
+    "coefficients": [
+      0.003197610843926668,
+      -0.0019162894459441304,
+      0.999993085861206,
+      -151.6977081298828
+    ],
+    "reference": "camera_xyz_mm"
+  },
+  "plane_offset_mm": 151.66527557373047,
+  "z_plane_reference": "charuco_board_only",
+  "z_plane_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "plane_offset_mean_mm": 151.65666325887045,
+    "plane_offset_std_mm": 0.026095814680862105,
+    "plane_fit_rmse_mean_mm": 0.3073723196508589,
+    "plane_fit_rmse_best_mm": 0.2821840303181919,
+    "plane_fit_rmse_worst_mm": 0.34104389292488074,
+    "board_point_count_mean": 5000.0,
+    "recommended_action": "save",
+    "recommendation_reason": "batch is stable"
+  },
+  "z_scale": 1.0078335682180375,
+  "z_bias_mm": 0.09913240789387691,
+  "z_validation": {
+    "sample_count": 12,
+    "requested_sample_count": 12,
+    "z_scale_sample_mean": 1.008266943425886,
+    "z_scale_sample_std": 0.0012847714201923179,
+    "z_bias_sample_mean_mm": 0.0930435891276472,
+    "z_bias_sample_std_mm": 0.039360980199345225,
+    "plane_offset_mm": 151.66527557373047,
+    "sample_fit_rmse_mean_mm": 0.11164904791508751,
+    "sample_fit_rmse_best_mm": 0.08263507830968275,
+    "sample_fit_rmse_worst_mm": 0.14616398884780898,
+    "aggregated_fit_rmse_mm": 0.10877661658381559,
+    "fit_mode": "tray_plus_all_steps",
+    "recommended_action": "save",
+    "recommendation_reason": "batch is stable"
+  },
+  "staircase_reference_heights_mm": [
+    9.2,
+    19.2,
+    29.2,
+    39.3
+  ],
+  "measured_plateau_heights_raw_mm": [
+    8.832839965820312,
+    19.04220962524414,
+    28.90699005126953,
+    38.87297821044922
+  ],
+  "plateau_residuals_mm": [
+    -0.09913240789387691,
+    0.1988349718545468,
+    -0.09051048125953898,
+    -0.03256733770815856,
+    0.023375255007060503
+  ],
+  "staircase_roi_xywh": [
+    270,
+    166,
+    162,
+    162
+  ],
+  "detected_plateaus": [
+    {
+      "seed_height_mm": 8.960113988446363,
+      "measured_height_mm": 8.954238891601562,
+      "pixel_count": 2067
+    },
+    {
+      "seed_height_mm": 19.396658417806464,
+      "measured_height_mm": 19.108291625976562,
+      "pixel_count": 2153
+    },
+    {
+      "seed_height_mm": 28.829688959728088,
+      "measured_height_mm": 28.857528686523438,
+      "pixel_count": 2044
+    },
+    {
+      "seed_height_mm": 38.864827834112795,
+      "measured_height_mm": 38.871803283691406,
+      "pixel_count": 1403
+    }
+  ],
+  "z_scale_reference": "all_staircase_plateaus_relative_to_fitted_board_plane",
+  "z_scale_placement_warning": "Staircase placement and ROI edge contamination can introduce small error.",
+  "used_reference_heights_mm": [
+    9.2,
+    19.2,
+    29.2,
+    39.3
+  ],
+  "used_measured_plateau_heights_raw_mm": [
+    8.832839965820312,
+    19.04220962524414,
+    28.90699005126953,
+    38.87297821044922
+  ]
+}

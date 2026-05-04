@@ -1,0 +1,72 @@
+# =============================================================================
+# .gitignore — realsense_scanner
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python virtual environment (recreate with: pip install -r requirements.txt)
+# -----------------------------------------------------------------------------
+.venv/
+
+# -----------------------------------------------------------------------------
+# Python bytecode and cache
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+
+# -----------------------------------------------------------------------------
+# Jupyter
+# -----------------------------------------------------------------------------
+.ipynb_checkpoints/
+*.ipynb
+
+# -----------------------------------------------------------------------------
+# Large experimental data — too big for git (use external storage / backup)
+# -----------------------------------------------------------------------------
+# 12 GB of scan output data
+scan_results/
+
+# 151 MB of topography meshes and point clouds (experimental outputs)
+calibration_results/topography/
+
+# 3D reconstruction output screenshots
+3D_reconstruction/
+
+# Depth profile validation run outputs (experimental data — NPY arrays, PNGs, CSVs)
+src/validation/depth_profile_validation_runs/
+
+# -----------------------------------------------------------------------------
+# External dependencies — pyProbe and pyProbeAnalysis by Dr. João Lagarto
+# These live in his own GitHub repositories and are not part of this codebase.
+# See docs/github_setup_guide.md for instructions on cloning them locally.
+# -----------------------------------------------------------------------------
+codigo_joao_git/
+joao25abril/
+
+# -----------------------------------------------------------------------------
+# Environment and secrets
+# -----------------------------------------------------------------------------
+.env
+*.env
+
+# -----------------------------------------------------------------------------
+# IDE and OS artefacts
+# -----------------------------------------------------------------------------
+.vscode/
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Logs and temporary files
+# -----------------------------------------------------------------------------
+*.log
+*.tmp
+*.bak

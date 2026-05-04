@@ -1,0 +1,8 @@
+{
+  "_comment": "Optional persistent Firmata neutral calibration for joysticks that do not rest exactly at the electrical midpoint. These values were seeded from measured raw resting readings.",
+  "axis_centers": {
+    "x": 0.488,
+    "y": 0.483,
+    "z": 0.487
+  }
+}

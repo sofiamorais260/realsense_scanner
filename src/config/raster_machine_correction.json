@@ -1,0 +1,9 @@
+{
+  "description": "Post-transform offset from the calibrated camera/ROI target to the physical probe/fibre target used by raster scans. Positive values move the commanded scanner target in positive scanner coordinates.",
+  "camera_to_probe_offset_mm": {
+    "x_mm": 0.0,
+    "y_mm": 1.50,
+    "z_mm": 0.0
+  },
+  "apply_z_compensation": true
+}
