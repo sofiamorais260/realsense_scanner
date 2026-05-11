@@ -3110,12 +3110,6 @@ class MainWindow(QMainWindow):
         default_probe_safety_margin_mm = (
             self.adaptive_raster_controller.DEFAULT_PROBE_SAFETY_MARGIN_MM
         )
-        if (
-            not force_fixed_z
-            and self.RASTER_SCAN_SURFACE_FOLLOWING_ENABLED
-            and self._get_active_scan_calibration_payload() is not None
-        ):
-            default_fibre_standoff_mm = max(default_fibre_standoff_mm, 5.0)
         surface_following_enabled = (
             not force_fixed_z
             and self.RASTER_SCAN_SURFACE_FOLLOWING_ENABLED
@@ -3513,6 +3507,50 @@ class MainWindow(QMainWindow):
         self.raster_scan_run_state = run_state
         self.latest_raster_scan_run_dir = run_state["run_dir"]
         self.raster_scan_started_at_monotonic = time.monotonic()
+
+        # ── Topographic depth map ─────────────────────────────────────────────
+        # Capture one full RealSense depth frame before motion starts.  This is
+        # the primary spatial reference for FLIM reconstruction: the scanner moves
+        # continuously in streaming mode (no per-step pause for individual depth
+        # captures), so this single pre-scan frame serves as the tissue surface
+        # height map for the entire measurement session.
+        frame_depth_raw = getattr(self.camera_worker, "frame_depth", None)
+        if frame_depth_raw is not None:
+            try:
+                run_dir = Path(run_state["run_dir"])
+                depth_array = np.asarray(frame_depth_raw, dtype="float32")
+
+                # Raw depth in sensor units (.npy) — needed for reconstruction
+                depth_npy_path = run_dir / "depth_map.npy"
+                np.save(str(depth_npy_path), depth_array)
+
+                # Colourised preview (.png) — for quick visual inspection
+                depth_preview_path = run_dir / "depth_map_preview.png"
+                valid_mask = depth_array > 0
+                if valid_mask.any():
+                    d_min = float(depth_array[valid_mask].min())
+                    d_max = float(depth_array[valid_mask].max())
+                    if d_max > d_min:
+                        norm = np.zeros_like(depth_array)
+                        norm[valid_mask] = (
+                            (depth_array[valid_mask] - d_min) / (d_max - d_min) * 255.0
+                        )
+                        coloured = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_TURBO)
+                        coloured[~valid_mask] = 0
+                        cv2.imwrite(str(depth_preview_path), coloured)
+
+                # Register both paths in the run metadata
+                run_state["depth_map_npy_path"] = str(depth_npy_path)
+                metadata_path = Path(run_state["metadata_path"])
+                metadata = self.raster_scan_artifact_controller._read_json(metadata_path)
+                metadata.setdefault("artifacts", {}).update({
+                    "depth_map_npy": str(depth_npy_path),
+                    "depth_map_preview": str(depth_preview_path),
+                })
+                self.raster_scan_artifact_controller._write_json(metadata_path, metadata)
+            except Exception as exc:
+                print(f"Depth map capture failed (non-fatal): {exc}")
+
         self.raster_scan_artifact_controller.append_event(
             run_state=run_state,
             event_type="raster_run_prepared",
@@ -4238,7 +4276,7 @@ class MainWindow(QMainWindow):
             return
 
         simulated_position = dict(self.grbl_machine_position)
-        validated_specs = []   # (limited_move_spec, step) for each step that passes
+        validated_steps = []   # list of (limited_move_spec, step) for each step that passes
 
         for step_index, step in enumerate(steps):
             move_spec = dict(step.get("move_spec") or {})
@@ -4268,7 +4306,7 @@ class MainWindow(QMainWindow):
                 )
                 return
 
-            validated_specs.append(limited_spec)
+            validated_steps.append((limited_spec, step))
 
             # Advance the simulated position by this step's deltas
             for axis in ("x", "y", "z"):
@@ -4276,18 +4314,64 @@ class MainWindow(QMainWindow):
                 if delta is not None and axis in simulated_position:
                     simulated_position[axis] = float(simulated_position[axis]) + float(delta)
 
-        # ── Build G-code from validated specs ─────────────────────────────────
-        commands = ["G21 G91"]  # millimetres, relative positioning
-        for limited_spec in validated_specs:
-            cmd = self.grbl_worker.controller.build_motion_command(
-                x=limited_spec.get("x"),
-                y=limited_spec.get("y"),
-                z=limited_spec.get("z"),
-                feedrate=limited_spec.get("feedrate", self.grbl_worker.controller.DEFAULT_FEEDRATE_MM_PER_MIN),
-                is_absolute=False,
-            )
-            if cmd:
-                commands.append(cmd)
+        # ── Build G-code from validated steps ─────────────────────────────────
+        # Preamble sets modal state once: G21 = millimetres, G91 = relative.
+        # Individual move commands do not need to repeat these modal codes.
+        #
+        # Inter-row transitions in a fixed-Z serpentine scan are pure Y steps
+        # (no X, no Z change) that create two 90° direction changes per row —
+        # GRBL decelerates hard at each corner.  We detect these and fold the Y
+        # offset into the following scan_row command, producing a shallow diagonal
+        # that GRBL traverses at near-constant feedrate with no junction stop.
+        #
+        # Near-zero deltas (< 0.001 mm) are omitted from each command so that
+        # floating-point residuals do not generate spurious micro-movements on
+        # idle axes, and to keep commands compact within the 127-byte GRBL buffer.
+        _AXIS_EPSILON_MM = 0.001  # treat deltas smaller than this as zero
+
+        commands = ["G21 G91"]
+        pending_y_offset = 0.0   # Y from a folded inter-row travel step
+
+        i = 0
+        while i < len(validated_steps):
+            spec, step = validated_steps[i]
+            kind = str(step.get("kind") or "")
+
+            x = float(spec.get("x") or 0.0)
+            y = float(spec.get("y") or 0.0)
+            z = float(spec.get("z") or 0.0)
+            feedrate = float(spec.get("feedrate") or self.grbl_worker.controller.DEFAULT_FEEDRATE_MM_PER_MIN)
+
+            # Detect inter-row travel: pure Y move with no X or Z displacement,
+            # followed immediately by a scan_row.  Fold the Y delta into the next
+            # step instead of emitting a separate command with a 90° junction.
+            if (kind == "travel"
+                    and abs(x) < _AXIS_EPSILON_MM
+                    and abs(z) < _AXIS_EPSILON_MM
+                    and abs(y) >= _AXIS_EPSILON_MM
+                    and i + 1 < len(validated_steps)
+                    and str(validated_steps[i + 1][1].get("kind") or "") == "scan_row"):
+                pending_y_offset += y
+                i += 1
+                continue
+
+            # Apply any accumulated Y offset from folded inter-row travel steps.
+            y += pending_y_offset
+            pending_y_offset = 0.0
+
+            # Build the command, omitting axes whose displacement is negligible.
+            coords = []
+            if abs(x) >= _AXIS_EPSILON_MM:
+                coords.append(f"X{x:.3f}")
+            if abs(y) >= _AXIS_EPSILON_MM:
+                coords.append(f"Y{y:.3f}")
+            if abs(z) >= _AXIS_EPSILON_MM:
+                coords.append(f"Z{z:.3f}")
+
+            if coords:
+                commands.append(f"G1 {' '.join(coords)} F{feedrate:.1f}")
+
+            i += 1
 
         if len(commands) <= 1:   # only the preamble, no real moves
             self._finish_raster_scan(
@@ -4296,6 +4380,61 @@ class MainWindow(QMainWindow):
                 unblock_joystick=True,
             )
             return
+
+        # ── Persist G-code sequence and FLIM sync map ─────────────────────────
+        # The G-code .txt lets anyone reproduce or inspect exactly what was sent.
+        # The flim_sync section documents the trigger→step correspondence so that
+        # pyProbe FLIM measurement N can be aligned to scan_row_steps[N] offline.
+        if self.raster_scan_run_state is not None:
+            run_dir = Path(self.raster_scan_run_state["run_dir"])
+            gcode_path = run_dir / "gcode_sequence.txt"
+            gcode_path.write_text("\n".join(commands), encoding="utf-8")
+
+            # Build trigger-index → step mapping for every scan_row in the sequence.
+            # trigger_index N (0-based) corresponds to the Nth pulse the Arduino
+            # sends, which is the Nth scan_row entry here.
+            scan_row_steps = []
+            for step in steps:
+                if step.get("kind") != "scan_row":
+                    continue
+                move_spec = dict(step.get("move_spec") or {})
+                tray_end = step.get("target_tray_point_mm")
+                tray_start = step.get("tray_start_point_mm")
+                scan_row_steps.append({
+                    "trigger_index": len(scan_row_steps),
+                    "step_index": step.get("step_index"),
+                    "scan_line_index": step.get("scan_line_index"),
+                    "segment_index": step.get("segment_index"),
+                    "point_id": step.get("point_id"),
+                    # tray_start_point_mm: where the probe is at the first trigger
+                    # of this row (start of the G-code command for this row).
+                    # Note: the inter-row Y offset is merged into this command, so
+                    # the actual start is shifted by line_spacing relative to the
+                    # previous row's end.  Use this for spatial interpolation.
+                    "tray_start_point_mm": dict(tray_start) if isinstance(tray_start, dict) else None,
+                    # tray_end_point_mm: where the probe is at the last trigger
+                    "tray_end_point_mm": dict(tray_end) if isinstance(tray_end, dict) else None,
+                    "move_length_mm": step.get("move_length_mm"),
+                    "feedrate_mm_per_min": move_spec.get("feedrate"),
+                })
+
+            flim_sync = {
+                "total_triggers_expected": len(scan_row_steps),
+                "description": (
+                    "trigger_index N (0-based) in pyProbe corresponds to "
+                    "scan_row_steps[N]. Inter-row Y offsets are merged into the "
+                    "scan_row G-code command (diagonal path). Use tray_start_point_mm "
+                    "and tray_end_point_mm to interpolate probe position within the row."
+                ),
+                "gcode_sequence_path": str(gcode_path),
+                "scan_row_steps": scan_row_steps,
+            }
+
+            metadata_path = Path(self.raster_scan_run_state["metadata_path"])
+            metadata = self.raster_scan_artifact_controller._read_json(metadata_path)
+            metadata.setdefault("artifacts", {})["gcode_sequence"] = str(gcode_path)
+            metadata["flim_sync"] = flim_sync
+            self.raster_scan_artifact_controller._write_json(metadata_path, metadata)
 
         # ── Record start event and emit ───────────────────────────────────────
         if self.raster_scan_run_state is not None:
@@ -4313,19 +4452,11 @@ class MainWindow(QMainWindow):
         )
         self._set_grbl_monitor_status_text("Streaming raster scan…")
 
-        # Set a synthetic current step so capture_scan_sample passes its
-        # kind == "scan_row" guard and saves depth frames throughout the stream.
-        # The scanner position will update in real-time via the status callback,
-        # so each captured frame gets the correct position when it is saved.
-        self.raster_scan_current_step = {
-            "kind": "scan_row",
-            "scan_line_index": 0,
-            "step_index": 0,
-            "point_id": "stream",
-            "target_tray_point_mm": None,
-            "segment_index": None,
-            "label": "Streaming raster scan",
-        }
+        # In streaming mode the scanner never pauses — per-step camera captures
+        # are not possible.  Leave raster_scan_current_step as None so that
+        # capture_scan_sample's kind=="scan_row" guard correctly rejects every
+        # frame.  One full depth frame is saved before the scan starts (see
+        # _start_raster_scan_artifacts) as the topographic reference instead.
 
         # Emit — GRBLWorker.stream_gcode_sequence runs in the worker thread
         self.grbl_stream_requested.emit({
