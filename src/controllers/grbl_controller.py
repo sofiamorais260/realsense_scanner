@@ -385,6 +385,126 @@ class GRBLController:
         position_mode = "G90" if is_absolute else "G91"
         return f"G1 {position_mode} {' '.join(coords)} F{float(feedrate):.1f}"
 
+    def stream_gcode(
+        self,
+        commands,
+        *,
+        idle_poll_interval_s=0.1,
+        idle_timeout_s=600.0,
+        status_callback=None,
+    ):
+        """Stream a list of G-code commands using GRBL character-counting protocol.
+
+        Sends all commands without waiting for individual 'ok' responses, keeping
+        GRBL's 128-byte serial receive buffer as full as possible for smooth,
+        uninterrupted motion.  After all commands are acknowledged, polls '?' until
+        GRBL reports Idle (motion complete) or the timeout expires.
+
+        Args:
+            commands: Iterable of G-code command strings (newlines optional).
+            idle_poll_interval_s: Seconds between '?' status polls after streaming.
+            idle_timeout_s: Maximum seconds to wait for GRBL to reach Idle.
+            status_callback: Optional callable(status_line) called on each poll.
+
+        Returns:
+            (success: bool, message: str, payload: dict)
+            payload includes 'start_unix_s' and 'end_unix_s'.
+        """
+        if self.connection is None:
+            return False, "GRBL is not connected.", {}
+
+        # Normalise to non-empty stripped lines with trailing newline
+        lines = [
+            str(cmd).strip() + "\n"
+            for cmd in list(commands or [])
+            if str(cmd).strip()
+        ]
+        if not lines:
+            return False, "No G-code commands to stream.", {}
+
+        # GRBL serial receive buffer is 128 bytes; stay 1 byte below for safety
+        GRBL_RX_BUFFER = 127
+
+        pending_lengths = []   # byte length of each in-flight command
+        bytes_in_flight = 0
+        line_index = 0
+        error_message = None
+
+        start_unix_s = time.time()
+
+        try:
+            while line_index < len(lines) or pending_lengths:
+                # Fill buffer with as many commands as fit
+                while line_index < len(lines):
+                    encoded = lines[line_index].encode("utf-8")
+                    if bytes_in_flight + len(encoded) > GRBL_RX_BUFFER:
+                        break
+                    self.connection.write(encoded)
+                    if hasattr(self.connection, "flush"):
+                        self.connection.flush()
+                    pending_lengths.append(len(encoded))
+                    bytes_in_flight += len(encoded)
+                    line_index += 1
+
+                # Wait for one response to free space
+                if pending_lengths:
+                    raw = self.connection.readline()
+                    response = raw.decode("utf-8", errors="replace").strip()
+                    if response.startswith("ok"):
+                        bytes_in_flight -= pending_lengths.pop(0)
+                    elif response.startswith("error"):
+                        error_message = f"GRBL error during streaming: {response}"
+                        break
+                    elif response.startswith("<") and status_callback is not None:
+                        # Status frame from a concurrent '?' query — forward to
+                        # the caller so the UI position display keeps updating.
+                        try:
+                            status_callback(response)
+                        except Exception:
+                            pass
+
+            if error_message:
+                end_unix_s = time.time()
+                return False, error_message, {
+                    "start_unix_s": start_unix_s,
+                    "end_unix_s": end_unix_s,
+                }
+
+            # All commands sent and acknowledged — wait for motion to finish
+            deadline = time.monotonic() + float(idle_timeout_s)
+            while time.monotonic() < deadline:
+                self.connection.write(b"?")
+                if hasattr(self.connection, "flush"):
+                    self.connection.flush()
+                raw = self.connection.readline()
+                status = raw.decode("utf-8", errors="replace").strip()
+                if status_callback is not None:
+                    try:
+                        status_callback(status)
+                    except Exception:
+                        pass
+                if "<Idle" in status:
+                    end_unix_s = time.time()
+                    return True, "G-code stream completed.", {
+                        "start_unix_s": start_unix_s,
+                        "end_unix_s": end_unix_s,
+                        "lines_sent": len(lines),
+                    }
+                self.sleep_fn(float(idle_poll_interval_s))
+
+            end_unix_s = time.time()
+            return False, "Timeout waiting for GRBL to reach Idle after streaming.", {
+                "start_unix_s": start_unix_s,
+                "end_unix_s": end_unix_s,
+            }
+
+        except Exception as exc:
+            end_unix_s = time.time()
+            return False, f"G-code streaming failed: {exc}", {
+                "start_unix_s": start_unix_s,
+                "end_unix_s": end_unix_s,
+            }
+
     def build_jog_command(
         self,
         *,

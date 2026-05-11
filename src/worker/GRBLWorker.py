@@ -189,6 +189,64 @@ class GRBLWorker(QObject):
         self._run_command(self.controller.cancel_jog, "cancel_jog")
 
     @pyqtSlot(object)
+    def stream_gcode_sequence(self, payload):
+        """Stream a full G-code sequence to GRBL without per-command acknowledgement.
+
+        payload dict keys:
+            commands  – list of G-code command strings
+            metadata  – optional dict passed back in the result unchanged
+
+        Emits command_completed with action='stream_gcode' and Unix timestamps
+        for the start and end of the stream so the caller can record them in
+        the raster scan artifacts.
+        """
+        payload = dict(payload or {})
+        commands = list(payload.get("commands") or [])
+        metadata = dict(payload.get("metadata") or {})
+
+        # Keep the monitor timer paused — it cannot fire anyway because this
+        # method blocks the worker thread for the full stream duration.
+        # Instead, forward any <...> status frames that GRBL sends mid-stream
+        # directly to the UI via status_received so position labels update.
+        was_monitor_enabled = self.monitor_enabled
+        self._set_monitor_enabled(False)
+
+        def _status_callback(status_line):
+            parsed = self.controller.parse_status_line(status_line)
+            parsed.update({
+                "success": True,
+                "message": status_line,
+                "connected": self.controller.is_connected(),
+                "port": self.controller.connected_port,
+                "status_line": status_line,
+                "log_lines": [f"RX (stream): {status_line}"],
+            })
+            self.status_received.emit(parsed)
+
+        success, message, stream_payload = self.controller.stream_gcode(
+            commands,
+            status_callback=_status_callback,
+        )
+
+        if was_monitor_enabled:
+            self._set_monitor_enabled(True)
+
+        result = {
+            "action": "stream_gcode",
+            "success": bool(success),
+            "message": message,
+            "payload": {
+                **stream_payload,
+                "metadata": metadata,
+            },
+            "connected": self.controller.is_connected(),
+            "port": self.controller.connected_port,
+            "request": {"commands_count": len(commands)},
+        }
+        self.command_completed.emit(result)
+        self.log_received.emit([message])
+
+    @pyqtSlot(object)
     def move_relative(self, move_spec):
         move_spec = dict(move_spec or {})
         self._run_command(

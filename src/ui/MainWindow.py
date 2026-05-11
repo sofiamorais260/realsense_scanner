@@ -8,6 +8,7 @@
 #
 # =====================================================
 
+from datetime import datetime
 from pathlib import Path
 import re
 import sys
@@ -154,6 +155,7 @@ class MainWindow(QMainWindow):
     grbl_move_relative_requested = pyqtSignal(object)
     grbl_jog_requested = pyqtSignal(object)
     grbl_cancel_jog_requested = pyqtSignal()
+    grbl_stream_requested = pyqtSignal(object)
     stop_joystick_worker_requested = pyqtSignal()
     joystick_refresh_ports_requested = pyqtSignal()
     joystick_connect_requested = pyqtSignal(str)
@@ -385,6 +387,7 @@ class MainWindow(QMainWindow):
         self.grbl_move_relative_requested.connect(self.grbl_worker.move_relative)
         self.grbl_jog_requested.connect(self.grbl_worker.jog_relative)
         self.grbl_cancel_jog_requested.connect(self.grbl_worker.cancel_jog)
+        self.grbl_stream_requested.connect(self.grbl_worker.stream_gcode_sequence)
 
         self.grbl_worker.ports_refreshed.connect(self._handle_grbl_ports_refreshed)
         self.grbl_worker.connection_state_changed.connect(
@@ -1714,16 +1717,30 @@ class MainWindow(QMainWindow):
             self.grbl_unlock_requested.emit()
             return
         if not self.grbl_recovery_homed:
-            # Always re-home at the start of each recovery so the home
-            # reference is guaranteed to be fresh.  Without this, a machine
-            # that was moved (joystick, raster, power-cycle) after the
-            # previous home would use a stale reference and land in the
-            # wrong position.
-            message = "Homing GRBL to refresh the reference before recovering to the scanner FOV..."
-            self.statusbar.showMessage(message)
-            self._set_grbl_monitor_status_text(message)
-            self.grbl_home_requested.emit()
-            return
+            # If the machine was already homed in this session (e.g. the user
+            # clicked the Home button before clicking Scanner FOV), reuse that
+            # reference rather than issuing a redundant $H.  The flags
+            # grbl_machine_limits_armed and grbl_home_reference_position are
+            # only set together after a successful $H, so their presence is a
+            # reliable indicator that the reference is fresh and trusted.
+            already_homed = (
+                self.grbl_machine_limits_armed
+                and self.grbl_home_reference_position is not None
+            )
+            if already_homed:
+                # Treat the existing home as if recovery itself homed the machine
+                # so subsequent calls to this method skip straight to motion.
+                self.grbl_recovery_homed = True
+            else:
+                # No trusted home reference — must re-home before moving.
+                # Without this, a machine that was moved (joystick, raster,
+                # power-cycle) after the previous home would use a stale
+                # reference and land in the wrong position.
+                message = "Homing GRBL to refresh the reference before recovering to the scanner FOV..."
+                self.statusbar.showMessage(message)
+                self._set_grbl_monitor_status_text(message)
+                self.grbl_home_requested.emit()
+                return
         current_position = self.grbl_workflow_controller.compute_home_relative_position(
             machine_position=self.grbl_machine_position,
             home_reference_position=self.grbl_home_reference_position,
@@ -2365,6 +2382,61 @@ class MainWindow(QMainWindow):
                 self.statusbar.showMessage(failure_message)
                 self._set_grbl_monitor_status_text(failure_message)
                 self._clear_roi_start_motion_state(unblock_joystick=True)
+            if payload.get("connected"):
+                self.grbl_query_status_requested.emit()
+            return
+        if action == "stream_gcode" and self.raster_scan_active:
+            stream_payload = dict(payload.get("payload") or {})
+            start_unix = stream_payload.get("start_unix_s")
+            end_unix = stream_payload.get("end_unix_s")
+            if payload.get("success"):
+                finish_message = (
+                    f"Raster stream completed in "
+                    f"{(end_unix - start_unix):.1f} s — "
+                    f"{int((self.raster_scan_plan or {}).get('line_count', 0))} lines."
+                )
+                self.statusbar.showMessage(finish_message)
+                self._set_grbl_monitor_status_text(finish_message)
+                if self.raster_scan_run_state is not None:
+                    self.raster_scan_artifact_controller.append_event(
+                        run_state=self.raster_scan_run_state,
+                        event_type="raster_stream_completed",
+                        message=finish_message,
+                        scanner_position_mm=self.grbl_scanner_position,
+                        machine_position_mm=self.grbl_machine_position,
+                        work_position_mm=self.grbl_work_position,
+                    )
+                    # Generate estimated raster_step_settled entries for every
+                    # scan_row step.  Timestamps are approximated from the
+                    # stream start time plus the cumulative motion duration
+                    # computed from feedrate and distance for each step.
+                    # These complement the hardware trigger timestamps from
+                    # pyProbe and allow post-hoc validation.
+                    if start_unix is not None:
+                        self._write_estimated_step_settled(start_unix)
+                self._finish_raster_scan(
+                    status="completed",
+                    message=finish_message,
+                    unblock_joystick=True,
+                )
+            else:
+                failure_message = message or "Raster G-code stream failed."
+                self.statusbar.showMessage(failure_message)
+                self._set_grbl_monitor_status_text(failure_message)
+                if self.raster_scan_run_state is not None:
+                    self.raster_scan_artifact_controller.append_event(
+                        run_state=self.raster_scan_run_state,
+                        event_type="raster_stream_failed",
+                        message=failure_message,
+                        scanner_position_mm=self.grbl_scanner_position,
+                        machine_position_mm=self.grbl_machine_position,
+                        work_position_mm=self.grbl_work_position,
+                    )
+                self._finish_raster_scan(
+                    status="failed",
+                    message=failure_message,
+                    unblock_joystick=True,
+                )
             if payload.get("connected"):
                 self.grbl_query_status_requested.emit()
             return
@@ -3817,7 +3889,10 @@ class MainWindow(QMainWindow):
             scanner_position_mm=self.grbl_scanner_position,
             machine_position_mm=self.grbl_machine_position,
         )
-        self._dispatch_next_raster_scan_step()
+        # Use streaming mode: send all G-code at once so both programs can
+        # run on the same PC without the scanner blocking on per-step acks.
+        # The Arduino generates hardware triggers for pyProbe synchronisation.
+        self._run_raster_scan_streaming()
 
     def _on_automatic_raster_scan_fixed_Z_button_clicked(self):
         """Build and execute a fixed-Z automatic serpentine raster scan over the current ROI.
@@ -4016,6 +4091,250 @@ class MainWindow(QMainWindow):
         if unblock_joystick:
             self.grbl_blocks_joystick_jog = False
         self._sync_grbl_monitor_polling()
+
+    def _write_estimated_step_settled(self, start_unix_s):
+        """Write estimated raster_step_settled entries for every scan_row step.
+
+        In streaming mode the scanner never pauses between steps, so we cannot
+        record the exact moment each row is completed.  Instead we compute an
+        estimated timestamp for each scan_row step using:
+
+            t_estimated = start_unix_s + cumulative_duration_s
+
+        where cumulative_duration_s is the sum of (move_length_mm / feedrate_mm_per_min * 60)
+        for all steps up to and including the current one.
+
+        These estimates do not account for GRBL acceleration/deceleration, so
+        they are approximate (typically within tens of milliseconds).  The
+        hardware trigger from the Arduino provides exact synchronisation with
+        pyProbe; these entries serve as a secondary alignment reference.
+        """
+        if self.raster_scan_run_state is None:
+            return
+        execution = self.raster_scan_execution or {}
+        steps = list(execution.get("steps") or [])
+        if not steps:
+            return
+
+        cumulative_s = 0.0
+        scan_row_count = 0
+
+        for step in steps:
+            move_spec = dict(step.get("move_spec") or {})
+            move_length_mm = float(step.get("move_length_mm") or 0.0)
+            feedrate_mm_per_min = float(move_spec.get("feedrate") or 1.0)
+            step_duration_s = (
+                move_length_mm / feedrate_mm_per_min * 60.0
+                if feedrate_mm_per_min > 0 and move_length_mm > 0
+                else 0.0
+            )
+            cumulative_s += step_duration_s
+
+            if step.get("kind") != "scan_row":
+                continue
+
+            scan_row_count += 1
+            estimated_unix_s = start_unix_s + cumulative_s
+
+            tray_point = step.get("target_tray_point_mm") or {}
+
+            # scanner_position_mm must be in home-relative GRBL machine
+            # coordinates, not tray coordinates.  In streaming mode we cannot
+            # know the exact position at each step, so we use the last known
+            # GRBL-reported position (updated via status frames during the
+            # stream).  This is the same value the monitor timer would have
+            # written in step-by-step mode.
+            scanner_pos = (
+                dict(self.grbl_scanner_position)
+                if isinstance(self.grbl_scanner_position, dict)
+                else {}
+            )
+
+            row = {
+                "run_id": self.raster_scan_run_state.get("run_id"),
+                "scan_mode": self.raster_scan_run_state.get("scan_mode"),
+                "timestamp_unix_s": float(estimated_unix_s),
+                "timestamp_iso": datetime.fromtimestamp(
+                    estimated_unix_s
+                ).isoformat(timespec="milliseconds"),
+                "step_index": step.get("step_index"),
+                "line_index": step.get("scan_line_index"),
+                "segment_index": step.get("segment_index"),
+                "point_id": step.get("point_id"),
+                "step_kind": "scan_row",
+                "target_tray_point_mm": (
+                    dict(tray_point) if isinstance(tray_point, dict) else None
+                ),
+                "scanner_position_mm": scanner_pos,
+                "machine_position_mm": None,
+                "work_position_mm": None,
+            }
+            csv_path = self.raster_scan_run_state.get("step_settled_csv_path")
+            if csv_path:
+                self.raster_scan_artifact_controller._append_step_settled_csv(
+                    csv_path, row
+                )
+                self.raster_scan_run_state["step_settled_count"] = (
+                    int(self.raster_scan_run_state.get("step_settled_count", 0)) + 1
+                )
+
+        if scan_row_count:
+            self.raster_scan_artifact_controller.append_event(
+                run_state=self.raster_scan_run_state,
+                event_type="raster_stream_step_settled_estimated",
+                message=(
+                    f"Wrote {scan_row_count} estimated raster_step_settled entries "
+                    f"(start_unix_s={start_unix_s:.3f})."
+                ),
+                scanner_position_mm=self.grbl_scanner_position,
+                machine_position_mm=self.grbl_machine_position,
+                work_position_mm=self.grbl_work_position,
+            )
+
+    def _run_raster_scan_streaming(self):
+        """Send the full raster execution sequence to GRBL in one streaming burst.
+
+        Before sending, validates every step against machine limits using a
+        simulated accumulated position — the same check the step-by-step mode
+        does per-step, but applied up-front to the whole sequence.  If any step
+        is blocked or clipped the scan is aborted before a single byte is sent.
+
+        Converts each validated step's move_spec into a G-code command, then
+        streams via GRBLWorker.stream_gcode_sequence and records Unix timestamps
+        in the raster artifacts.  The Arduino hardware trigger handles per-
+        measurement synchronisation with pyProbe; the timestamps here provide a
+        secondary validation layer.
+        """
+        if not self.raster_scan_active:
+            return
+
+        execution = self.raster_scan_execution or {}
+        steps = list(execution.get("steps") or [])
+        if not steps:
+            self._finish_raster_scan(
+                status="error",
+                message="Streaming failed: execution sequence is empty.",
+                unblock_joystick=True,
+            )
+            return
+
+        # ── Pre-flight: validate every step against machine limits ────────────
+        # Simulate the accumulated machine position step by step so each check
+        # uses the position that GRBL will actually be at when that command runs.
+        if not self.grbl_machine_limits_armed or self.grbl_home_reference_position is None:
+            self._finish_raster_scan(
+                status="blocked",
+                message="Streaming blocked: home the machine first so machine limits can be enforced.",
+                unblock_joystick=True,
+            )
+            return
+
+        if not isinstance(self.grbl_machine_position, dict):
+            self._finish_raster_scan(
+                status="blocked",
+                message="Streaming blocked: current machine position is unknown.",
+                unblock_joystick=True,
+            )
+            return
+
+        simulated_position = dict(self.grbl_machine_position)
+        validated_specs = []   # (limited_move_spec, step) for each step that passes
+
+        for step_index, step in enumerate(steps):
+            move_spec = dict(step.get("move_spec") or {})
+            limited_spec, limit_message = self.grbl_workflow_controller.apply_machine_limits_to_relative_move(
+                move_spec=move_spec,
+                current_machine_position=simulated_position,
+                home_reference_position=self.grbl_home_reference_position,
+                machine_limits_mm=self.grbl_workflow_controller.GRBL_MACHINE_LIMITS_MM,
+                epsilon_mm=self.grbl_workflow_controller.GRBL_LIMIT_EPSILON_MM,
+            )
+            if limited_spec is None:
+                # Step is fully blocked — abort before sending anything
+                label = str(step.get("label") or f"step {step_index}")
+                self._finish_raster_scan(
+                    status="blocked",
+                    message=f"Streaming blocked at {label}: {limit_message}",
+                    unblock_joystick=True,
+                )
+                return
+            if limit_message:
+                # Step was clipped — also abort; partial moves in a stream are unsafe
+                label = str(step.get("label") or f"step {step_index}")
+                self._finish_raster_scan(
+                    status="blocked",
+                    message=f"Streaming blocked: {label} was clipped by machine limits ({limit_message}). Reduce the scan area.",
+                    unblock_joystick=True,
+                )
+                return
+
+            validated_specs.append(limited_spec)
+
+            # Advance the simulated position by this step's deltas
+            for axis in ("x", "y", "z"):
+                delta = limited_spec.get(axis)
+                if delta is not None and axis in simulated_position:
+                    simulated_position[axis] = float(simulated_position[axis]) + float(delta)
+
+        # ── Build G-code from validated specs ─────────────────────────────────
+        commands = ["G21 G91"]  # millimetres, relative positioning
+        for limited_spec in validated_specs:
+            cmd = self.grbl_worker.controller.build_motion_command(
+                x=limited_spec.get("x"),
+                y=limited_spec.get("y"),
+                z=limited_spec.get("z"),
+                feedrate=limited_spec.get("feedrate", self.grbl_worker.controller.DEFAULT_FEEDRATE_MM_PER_MIN),
+                is_absolute=False,
+            )
+            if cmd:
+                commands.append(cmd)
+
+        if len(commands) <= 1:   # only the preamble, no real moves
+            self._finish_raster_scan(
+                status="error",
+                message="Streaming failed: no valid G-code commands generated after limit check.",
+                unblock_joystick=True,
+            )
+            return
+
+        # ── Record start event and emit ───────────────────────────────────────
+        if self.raster_scan_run_state is not None:
+            self.raster_scan_artifact_controller.append_event(
+                run_state=self.raster_scan_run_state,
+                event_type="raster_stream_started",
+                message=f"Streaming {len(commands)} G-code commands to GRBL (all steps passed limit check).",
+                scanner_position_mm=self.grbl_scanner_position,
+                machine_position_mm=self.grbl_machine_position,
+                work_position_mm=self.grbl_work_position,
+            )
+
+        self.statusbar.showMessage(
+            f"Streaming raster scan ({len(commands)} commands)…"
+        )
+        self._set_grbl_monitor_status_text("Streaming raster scan…")
+
+        # Set a synthetic current step so capture_scan_sample passes its
+        # kind == "scan_row" guard and saves depth frames throughout the stream.
+        # The scanner position will update in real-time via the status callback,
+        # so each captured frame gets the correct position when it is saved.
+        self.raster_scan_current_step = {
+            "kind": "scan_row",
+            "scan_line_index": 0,
+            "step_index": 0,
+            "point_id": "stream",
+            "target_tray_point_mm": None,
+            "segment_index": None,
+            "label": "Streaming raster scan",
+        }
+
+        # Emit — GRBLWorker.stream_gcode_sequence runs in the worker thread
+        self.grbl_stream_requested.emit({
+            "commands": commands,
+            "metadata": {
+                "line_count": int((self.raster_scan_plan or {}).get("line_count", 0)),
+                "step_count": len(steps),
+            },
+        })
 
     def _dispatch_next_raster_scan_step(self):
         if not self.raster_scan_active:
