@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from pathlib import Path
 
 import cv2
@@ -16,7 +17,18 @@ class RasterReconstructionError(RuntimeError):
 
 
 class RasterReconstructionController:
-    """Build a raster-result reconstruction bundle from one saved raster run."""
+    """Build a raster-result reconstruction bundle from one saved raster run.
+
+    The reconstruction groups all captured samples by their ``point_id`` (one
+    unique raster-target position) rather than treating every dwell frame
+    independently.  Only settled frames — those whose scanner position matches
+    the final position of the target within SETTLE_TOLERANCE_MM — contribute to
+    the averaged depth used for that target.  This eliminates motion-blur from
+    the dwell start and gives a single, representative geometry contribution per
+    target regardless of how many dwell samples were captured.
+    """
+
+    SETTLE_TOLERANCE_MM = 0.05  # max XYZ distance from final position to count as settled
 
     def reconstruct_run(
         self,
@@ -83,20 +95,13 @@ class RasterReconstructionController:
         )
 
         # ── Z-scale correction setup ──────────────────────────────────────────
-        # In surface-following mode the scanner Z changes per sample, moving the
-        # camera closer to or farther from the tray.  The homography was calibrated
-        # at the reference scanner Z, so applying it unchanged at a different Z
-        # introduces a perspective scale error that grows toward the frame edges.
-        #
-        # Convention: Z+ = scanner UP (away from tray, toward camera).
-        #
-        # We correct by scaling each pixel toward the optical centre before
-        # applying the homography, using the physical camera-to-tray distance
-        # derived from the plane model (ax+by+cz+d=0, depth along optical axis
-        # = -d/c at the centre pixel).
-        #
-        # The height computation (plane_depth − measured_depth) is unaffected by
-        # Z changes because both terms shift by the same amount.
+        # In surface-following mode the scanner Z changes per target, shifting
+        # the camera closer to or farther from the tray.  The homography was
+        # calibrated at the reference scanner Z; applying it unchanged at a
+        # different Z introduces a perspective scale error that grows toward the
+        # frame edges.  We correct by rescaling each pixel toward the optical
+        # centre before applying the homography so that all targets share one
+        # consistent tray-space coordinate frame.
         ref_machine_z_mm = float(reference_scanner_position.get("z", 0.0))
         ppx = float(intrinsics["ppx"])
         ppy = float(intrinsics["ppy"])
@@ -107,14 +112,12 @@ class RasterReconstructionController:
             pm_raw.get("coefficients") if isinstance(pm_raw, dict) else pm_raw,
             dtype="float64",
         ).reshape(-1)
-        # h_ref_mm: physical distance from camera to tray along the optical axis
-        # at the calibration scanner position (always positive).
         if pm_coeffs.size == 4 and abs(float(pm_coeffs[2])) > 1e-9:
             h_ref_mm = float(-pm_coeffs[3] / pm_coeffs[2])
         else:
-            h_ref_mm = None  # fallback: no correction
+            h_ref_mm = None  # fallback: no perspective correction
 
-        # Pre-build the pixel grid for the ROI (reused for every sample).
+        # Pre-build the pixel grid for the ROI (reused for every target).
         roi_box_ints = [int(v) for v in roi_box]
         rx, ry, rw, rh = roi_box_ints
         grid_u, grid_v = np.meshgrid(
@@ -122,33 +125,53 @@ class RasterReconstructionController:
             np.arange(ry, ry + rh, dtype="float32"),
         )
 
+        # ── Group all sample entries by point_id ──────────────────────────────
+        # Each unique point_id is one raster-target position.  Multiple entries
+        # per point_id are dwell captures; we will fuse only the settled ones.
+        target_groups = self._group_samples_by_target(sample_entries)
+        if not target_groups:
+            raise RasterReconstructionError(
+                "No valid point_id groups could be formed from the scan samples."
+            )
+
+        # Canonical target order: sort by point_id so output is deterministic.
+        target_ids = sorted(target_groups.keys())
+
         # ── Accumulation buffers ──────────────────────────────────────────────
-        # One unified geometry source: corrected (x, y, height) points that feed
-        # both the topography height grid AND all three PLY colour layers.
         x_points = []
         y_points = []
         height_points = []
-        used_sample_count = 0
+        used_target_count = 0
 
-        pc_xyz = []          # (N, 3) float32  [tray_x, tray_y, height_mm]
-        pc_rgb = []          # (N, 3) float32  [0..1] RGB — NaN if no colour frame
-        pc_line_index = []   # (N,)   int32    scan-line index per point
-        pc_sample_index = [] # (N,)   int32    sample index per point
+        pc_xyz = []           # (N, 3) float32  [tray_x, tray_y, height_mm]
+        pc_rgb = []           # (N, 3) float32  [0..1] RGB — NaN if no colour frame
+        pc_line_index = []    # (N,)   int32    scan-line index per point
+        pc_target_index = []  # (N,)   int32    target index (0-based, sorted by point_id)
 
-        for sample_i, sample in enumerate(sample_entries):
-            sample_path = Path(sample.get("npz_path") or "")
-            if not sample_path.is_absolute():
-                sample_path = run_dir / sample_path
-            if not sample_path.exists():
+        skipped_targets = 0
+
+        for target_idx, point_id in enumerate(target_ids):
+            samples = target_groups[point_id]
+
+            # Fuse settled depth frames for this target.
+            fused = self._select_representative_frame(
+                samples,
+                run_dir=run_dir,
+                tolerance_mm=self.SETTLE_TOLERANCE_MM,
+            )
+            if fused is None:
+                skipped_targets += 1
                 continue
-            scanner_position = sample.get("scanner_position_mm")
+
+            avg_depth_frame, rep_sample, n_settled, rep_color_bgr = fused
+
+            scanner_position = rep_sample.get("scanner_position_mm")
             if not isinstance(scanner_position, dict):
+                skipped_targets += 1
                 continue
 
-            sample_payload = np.load(str(sample_path))
-            frame_depth = np.asarray(sample_payload["frame_depth"])
             topography = compute_topography_map(
-                frame_depth=frame_depth,
+                frame_depth=avg_depth_frame,
                 depth_scale_mm=depth_scale_mm,
                 intrinsics=intrinsics,
                 roi_box=roi_box,
@@ -159,6 +182,7 @@ class RasterReconstructionController:
             )
             valid_mask = np.asarray(topography["valid_mask"], dtype=bool)
             if not np.any(valid_mask):
+                skipped_targets += 1
                 continue
 
             sample_tray_xy = self._machine_xy_to_tray_xy(
@@ -169,13 +193,8 @@ class RasterReconstructionController:
             heights = np.asarray(topography["height_map_mm"], dtype="float32")
 
             # ── Z-scale corrected tray XY ─────────────────────────────────────
-            # Compute the scale factor for this sample's scanner Z, then remap
-            # the pixel grid before applying the homography so that all samples
-            # share one consistent tray-space coordinate frame regardless of
-            # how much the scanner Z changed during surface-following.
             sample_machine_z_mm = float(scanner_position.get("z", ref_machine_z_mm))
             delta_z_mm = sample_machine_z_mm - ref_machine_z_mm
-            # Z+ = scanner UP = camera farther from tray → scale > 1.
             if h_ref_mm is not None and abs(h_ref_mm) > 1e-6 and abs(delta_z_mm) > 0.1:
                 z_scale_xy = (h_ref_mm + delta_z_mm) / h_ref_mm
                 u_corr = (ppx + (grid_u - ppx) * z_scale_xy).reshape(-1)
@@ -187,19 +206,19 @@ class RasterReconstructionController:
                 x_map = xy_mm[:, 0].reshape(rh, rw).astype("float32")
                 y_map = xy_mm[:, 1].reshape(rh, rw).astype("float32")
             else:
-                # No Z change (or fallback): use the maps already computed.
                 x_map = np.asarray(topography["x_map_mm"], dtype="float32")
                 y_map = np.asarray(topography["y_map_mm"], dtype="float32")
 
             x_global = x_map + float(delta_tray_xy[0])
             y_global = y_map + float(delta_tray_xy[1])
 
-            # ── Feed the unified geometry into both outputs ───────────────────
+            # Accumulate into 2-D height grid.
             x_points.append(x_global[valid_mask].reshape(-1))
             y_points.append(y_global[valid_mask].reshape(-1))
             height_points.append(heights[valid_mask].reshape(-1))
-            used_sample_count += 1
+            used_target_count += 1
 
+            # Accumulate into point cloud.
             n_valid = int(np.sum(valid_mask))
             xyz = np.column_stack([
                 x_global[valid_mask].reshape(-1),
@@ -208,29 +227,25 @@ class RasterReconstructionController:
             ]).astype("float32")
             pc_xyz.append(xyz)
 
-            # Camera colour: frame_color_bgr pixel (u, v) aligns 1-to-1 with
-            # depth pixel (u, v), so cropping to the ROI gives direct correspondence
-            # with valid_mask.
-            if "frame_color_bgr" in sample_payload:
-                color_full = np.asarray(sample_payload["frame_color_bgr"], dtype="uint8")
-                color_roi = color_full[ry:ry + rh, rx:rx + rw]
-                rgb_uint8 = color_roi[valid_mask]                                  # (N, 3) BGR
-                rgb_float = rgb_uint8[:, ::-1].astype("float32") / 255.0          # (N, 3) RGB
+            if rep_color_bgr is not None:
+                color_roi = rep_color_bgr[ry:ry + rh, rx:rx + rw]
+                rgb_uint8 = color_roi[valid_mask]
+                rgb_float = rgb_uint8[:, ::-1].astype("float32") / 255.0   # BGR→RGB
             else:
                 rgb_float = np.full((n_valid, 3), np.nan, dtype="float32")
             pc_rgb.append(rgb_float)
 
-            line_idx_val = sample.get("line_index")
+            line_idx_val = rep_sample.get("line_index")
             pc_line_index.append(np.full(
                 n_valid,
                 -1 if line_idx_val is None else int(line_idx_val),
                 dtype="int32",
             ))
-            pc_sample_index.append(np.full(n_valid, sample_i, dtype="int32"))
+            pc_target_index.append(np.full(n_valid, target_idx, dtype="int32"))
 
         if not x_points:
             raise RasterReconstructionError(
-                "No valid stitched raster samples were available for reconstruction."
+                "No valid raster targets yielded usable settled depth frames for reconstruction."
             )
 
         x_points = np.concatenate(x_points).astype("float32")
@@ -243,81 +258,93 @@ class RasterReconstructionController:
             y_points=y_points,
             height_points=height_points,
             grid_step_mm=max(1e-3, xy_scale_mm_per_px),
-            used_sample_count=used_sample_count,
+            used_sample_count=used_target_count,
         )
 
-        topography = self._build_stitched_topography(stitched)
-        report_topography = topography_tools.prepare_for_report(topography)
+        # ── Stage 2: spatial denoising of the stitched height grid ─────────
+        # After binning, each grid cell holds the mean height from all depth-
+        # frame pixels that projected onto it.  Registration jitter between
+        # adjacent scan targets and residual per-pixel noise that survived
+        # Stage 1 can still cause cell-to-cell height variation that looks
+        # blotchy in the rendered topography.  A second 3×3 median filter on
+        # the assembled grid suppresses these inter-target artefacts without
+        # blurring real tissue structure (which varies over many cells, not
+        # between neighbours).
+        stitched = self._smooth_stitched_height_map(stitched, kernel_size=3)
+
+        topography_result = self._build_stitched_topography(stitched)
+        report_topography = topography_tools.prepare_for_report(topography_result)
         output_paths = topography_tools.save_capture(report_topography, scan_calibration)
         topography_tools.render_report(
             topography=report_topography,
             calibration=scan_calibration,
             png_path=output_paths["png_path"],
         )
+
         density_outputs = self._save_density_outputs(
             bundle_path=output_paths["bundle_path"],
             sample_count_map=np.asarray(stitched["sample_count_map"], dtype="int32"),
             valid_mask=np.asarray(stitched["valid_mask"], dtype=bool),
         )
+
         if show_preview:
             topography_tools.show_preview(output_paths["png_path"])
 
-        # ── Save coloured point cloud ──────────────────────────────────────────
+        # ── Save point cloud: one PLY (RGB) + one NPZ ─────────────────────────
         point_cloud_outputs = {}
         if pc_xyz:
-            all_xyz = np.concatenate(pc_xyz, axis=0)                    # (N, 3)
-            all_rgb = np.concatenate(pc_rgb, axis=0)                    # (N, 3) — may have NaN rows
-            all_line_index = np.concatenate(pc_line_index, axis=0)      # (N,)
-            all_sample_index = np.concatenate(pc_sample_index, axis=0)  # (N,)
+            all_xyz = np.concatenate(pc_xyz, axis=0)               # (N, 3)
+            all_rgb = np.concatenate(pc_rgb, axis=0)               # (N, 3)
+            all_line_index = np.concatenate(pc_line_index, axis=0) # (N,)
+            all_target_index = np.concatenate(pc_target_index, axis=0)  # (N,)
 
             bundle_dir = Path(output_paths["bundle_path"]).parent
             stem = Path(output_paths["bundle_path"]).stem
 
-            # Save the raw point cloud data as NPZ for layer-switching in the viewer.
+            # Single RGB-coloured PLY (NaN-rgb points fall back to grey).
+            has_color = np.any(np.isfinite(all_rgb), axis=1)
+            rgb_for_ply = all_rgb.copy()
+            rgb_for_ply[~has_color] = 0.5
+            rgb_for_ply = np.clip(rgb_for_ply, 0.0, 1.0)
+            pc_ply_path = bundle_dir / f"{stem}_point_cloud.ply"
+            self._write_coloured_ply(pc_ply_path, all_xyz, rgb_for_ply)
+
+            # NPZ with all layers for the viewer (xyz, rgb, line_index, target_index).
             pc_npz_path = bundle_dir / f"{stem}_point_cloud.npz"
             np.savez_compressed(
                 str(pc_npz_path),
                 xyz=all_xyz,
                 rgb=all_rgb,
                 line_index=all_line_index,
-                sample_index=all_sample_index,
+                target_index=all_target_index,
             )
 
-            # PLY coloured by camera RGB (NaN-rgb points fall back to grey).
-            has_color = np.any(np.isfinite(all_rgb), axis=1)
-            rgb_for_ply = all_rgb.copy()
-            rgb_for_ply[~has_color] = 0.5  # grey for samples without colour
-            rgb_for_ply = np.clip(rgb_for_ply, 0.0, 1.0)
-            pc_rgb_ply_path = bundle_dir / f"{stem}_point_cloud_rgb.ply"
-            self._write_coloured_ply(pc_rgb_ply_path, all_xyz, rgb_for_ply)
-
-            # PLY coloured by height (viridis colormap).
-            rgb_height = self._height_to_rgb(all_xyz[:, 2])
-            pc_height_ply_path = bundle_dir / f"{stem}_point_cloud_height.ply"
-            self._write_coloured_ply(pc_height_ply_path, all_xyz, rgb_height)
-
-            # PLY coloured by scan line index (tab10 colormap).
-            rgb_lines = self._line_index_to_rgb(all_line_index)
-            pc_lines_ply_path = bundle_dir / f"{stem}_point_cloud_lines.ply"
-            self._write_coloured_ply(pc_lines_ply_path, all_xyz, rgb_lines)
-
             point_cloud_outputs = {
+                "point_cloud_ply_path": pc_ply_path,
                 "point_cloud_npz_path": pc_npz_path,
-                "point_cloud_rgb_ply_path": pc_rgb_ply_path,
-                "point_cloud_height_ply_path": pc_height_ply_path,
-                "point_cloud_lines_ply_path": pc_lines_ply_path,
             }
 
+        # ── Scan path (for UI overlay) ────────────────────────────────────────
+        scan_path = self._build_scan_path_from_samples(
+            sample_entries=sample_entries,
+            machine_calibration=machine_calibration,
+            reference_tray_xy=reference_tray_xy,
+        )
+
+        # ── reconstruction.json ────────────────────────────────────────────────
         reconstruction_summary = {
             "source_run_dir": str(run_dir),
-            "sample_count": int(len(sample_entries)),
-            "used_sample_count": int(stitched["used_sample_count"]),
+            "total_sample_count": int(len(sample_entries)),
+            "unique_target_count": int(len(target_ids)),
+            "used_target_count": int(used_target_count),
+            "skipped_target_count": int(skipped_targets),
             "point_count": int(stitched["point_count"]),
             "grid_step_mm": float(stitched["grid_step_mm"]),
             "x_min_mm": float(stitched["x_min_mm"]),
             "x_max_mm": float(stitched["x_max_mm"]),
             "y_min_mm": float(stitched["y_min_mm"]),
             "y_max_mm": float(stitched["y_max_mm"]),
+            "settle_tolerance_mm": float(self.SETTLE_TOLERANCE_MM),
             "line_indices": sorted(
                 {
                     int(sample.get("line_index"))
@@ -326,26 +353,23 @@ class RasterReconstructionController:
                 }
             ),
             "bundle_path": str(output_paths["bundle_path"]),
-            "png_path": str(output_paths["png_path"]),
-            "point_cloud_path": str(output_paths["point_cloud_path"]),
-            "mesh_path": str(output_paths["mesh_path"]),
+            "preview_path": str(output_paths["png_path"]),
+            "mesh_path": str(output_paths.get("mesh_path", "")),
             "coverage_mask_path": str(density_outputs["coverage_mask_path"]),
             "sample_density_path": str(density_outputs["sample_density_path"]),
+            **{k: str(v) for k, v in point_cloud_outputs.items()},
         }
-        summary_path = Path(output_paths["bundle_path"]).with_name(
-            f"{Path(output_paths['bundle_path']).stem}_raster_reconstruction.json"
+        bundle_dir = Path(output_paths["bundle_path"]).parent
+        summary_path = bundle_dir / "reconstruction.json"
+        summary_path.write_text(
+            json.dumps(reconstruction_summary, indent=2), encoding="utf-8"
         )
-        summary_path.write_text(json.dumps(reconstruction_summary, indent=2), encoding="utf-8")
 
         message = (
-            f"Raster reconstruction saved to {output_paths['bundle_path']} | "
-            f"mesh {output_paths['mesh_path']} | "
-            f"used {stitched['used_sample_count']} samples"
-        )
-        scan_path = self._build_scan_path_from_samples(
-            sample_entries=sample_entries,
-            machine_calibration=machine_calibration,
-            reference_tray_xy=reference_tray_xy,
+            f"Raster reconstruction complete — "
+            f"{used_target_count}/{len(target_ids)} targets used "
+            f"({skipped_targets} skipped) | "
+            f"bundle: {output_paths['bundle_path']}"
         )
         return {
             "topography": report_topography,
@@ -359,20 +383,137 @@ class RasterReconstructionController:
             "message": message,
         }
 
+    # ── Helper: group samples by target ──────────────────────────────────────
+
+    @staticmethod
+    def _group_samples_by_target(sample_entries):
+        """Group sample entries by ``point_id``, preserving encounter order.
+
+        Samples without a ``point_id`` are silently dropped — they correspond
+        to travel steps that were captured without a valid point identity.
+        Returns an OrderedDict-like defaultdict preserving insertion order.
+        """
+        groups = defaultdict(list)
+        for sample in sample_entries:
+            point_id = sample.get("point_id")
+            if point_id is not None:
+                groups[str(point_id)].append(sample)
+        return dict(groups)
+
+    @classmethod
+    def _select_representative_frame(cls, samples, *, run_dir, tolerance_mm):
+        """Fuse settled depth frames for one raster target.
+
+        'Settled' means the scanner XYZ position is within *tolerance_mm* of
+        the last sample's position (which is the final, stationary capture after
+        the dwell timer expired).  Frames from samples still in motion at the
+        dwell start are excluded.
+
+        Returns a 4-tuple:
+          (averaged_depth_frame, representative_sample, n_settled, color_bgr)
+        or None if no usable settled frame could be loaded.
+        """
+        if not samples:
+            return None
+
+        last_sample = samples[-1]
+        last_pos = last_sample.get("scanner_position_mm")
+        if not isinstance(last_pos, dict):
+            return None
+
+        last_xyz = np.array(
+            [float(last_pos.get("x", 0.0)),
+             float(last_pos.get("y", 0.0)),
+             float(last_pos.get("z", 0.0))],
+            dtype="float64",
+        )
+
+        # Identify settled samples.
+        settled_indices = []
+        for i, sample in enumerate(samples):
+            pos = sample.get("scanner_position_mm")
+            if not isinstance(pos, dict):
+                continue
+            xyz = np.array(
+                [float(pos.get("x", 0.0)),
+                 float(pos.get("y", 0.0)),
+                 float(pos.get("z", 0.0))],
+                dtype="float64",
+            )
+            if float(np.linalg.norm(xyz - last_xyz)) <= float(tolerance_mm):
+                settled_indices.append(i)
+
+        if not settled_indices:
+            # Nothing settled — fall back to the last sample only.
+            settled_indices = [len(samples) - 1]
+
+        # Load and average depth frames from settled samples.
+        depth_frames = []
+        rep_sample = None
+        rep_color_bgr = None
+
+        for i in settled_indices:
+            sample = samples[i]
+            sample_path = Path(sample.get("npz_path") or "")
+            if not sample_path.is_absolute():
+                sample_path = run_dir / sample_path
+            if not sample_path.exists():
+                continue
+
+            payload = np.load(str(sample_path))
+            raw_depth = np.asarray(payload["frame_depth"])
+            # Treat pixel value 0 as missing depth so it is excluded from the mean.
+            frame_float = raw_depth.astype("float32")
+            frame_float = np.where(frame_float == 0.0, np.nan, frame_float)
+            depth_frames.append(frame_float)
+
+            # Use the last loaded settled sample as the metadata representative
+            # and take its colour frame (camera image is most recent there).
+            rep_sample = sample
+            if "frame_color_bgr" in payload:
+                rep_color_bgr = np.asarray(payload["frame_color_bgr"], dtype="uint8")
+
+        if not depth_frames:
+            return None
+
+        if len(depth_frames) == 1:
+            avg_depth = depth_frames[0]
+        else:
+            # Average across settled frames, ignoring missing pixels.
+            stacked = np.stack(depth_frames, axis=0)
+            avg_depth = np.nanmean(stacked, axis=0).astype("float32")
+
+        # ── Stage 1: spatial denoising of the averaged depth frame ──────────
+        # RealSense depth has substantial per-pixel measurement noise (typically
+        # ±1–2 mm at close range) that survives temporal averaging because each
+        # pixel reads independently.  A 3×3 median filter removes isolated
+        # noise spikes and quantisation artefacts while preserving tissue edges
+        # better than any linear (Gaussian) smoothing would.
+        #
+        # NaN handling: fill missing pixels with 0 before the filter (cv2
+        # medianBlur does not handle NaN), then restore the NaN mask afterwards
+        # so that neighbouring valid pixels cannot 'leak' into the missing
+        # region and inflate the height estimate there.
+        missing_mask = np.isnan(avg_depth)
+        depth_for_filter = np.where(missing_mask, 0.0, avg_depth).astype("float32")
+        depth_for_filter = cv2.medianBlur(depth_for_filter, ksize=3)
+        avg_depth = np.where(missing_mask, np.nan, depth_for_filter)
+
+        # Restore 0 for pixels that were missing in ALL settled frames — that is
+        # what compute_topography_map expects for invalid pixels.
+        avg_depth = np.where(np.isnan(avg_depth), 0.0, avg_depth)
+
+        return avg_depth, rep_sample, len(depth_frames), rep_color_bgr
+
+    # ── Scan-path helper ──────────────────────────────────────────────────────
+
     @staticmethod
     def _build_scan_path_from_samples(*, sample_entries, machine_calibration, reference_tray_xy):
-        """Return the ordered probe scan path in stitched tray-delta coordinates.
-
-        Each sample entry carries either a ``target_tray_point_mm`` (already in
-        tray space — cheapest to use) or a ``scanner_position_mm`` (machine space
-        — converted via the calibration).  Samples are used in list order, which
-        matches the order they were written during the scan.
-        """
+        """Return the ordered probe scan path in stitched tray-delta coordinates."""
         path_x, path_y, line_indices = [], [], []
         for sample in sample_entries:
             tray_pt = sample.get("target_tray_point_mm")
             if isinstance(tray_pt, dict) and tray_pt.get("x") is not None:
-                # Already in tray space — just shift to the reconstruction origin.
                 delta = np.asarray(
                     [float(tray_pt["x"]), float(tray_pt["y"])], dtype="float64"
                 ) - reference_tray_xy
@@ -391,11 +532,9 @@ class RasterReconstructionController:
 
         if not path_x:
             return None
-        return {
-            "x_mm": path_x,
-            "y_mm": path_y,
-            "line_indices": line_indices,
-        }
+        return {"x_mm": path_x, "y_mm": path_y, "line_indices": line_indices}
+
+    # ── Static geometry helpers ───────────────────────────────────────────────
 
     @staticmethod
     def _machine_xy_to_tray_xy(*, machine_point_mm, calibration_payload):
@@ -443,20 +582,14 @@ class RasterReconstructionController:
         y_min = float(np.min(y_points))
         y_max = float(np.max(y_points))
 
-        grid_width = int(np.floor((x_max - x_min) / grid_step_mm)) + 1
-        grid_height = int(np.floor((y_max - y_min) / grid_step_mm)) + 1
-        grid_width = max(grid_width, 1)
-        grid_height = max(grid_height, 1)
+        grid_width = max(1, int(np.floor((x_max - x_min) / grid_step_mm)) + 1)
+        grid_height = max(1, int(np.floor((y_max - y_min) / grid_step_mm)) + 1)
 
         x_index = np.clip(
-            np.round((x_points - x_min) / grid_step_mm).astype("int32"),
-            0,
-            grid_width - 1,
+            np.round((x_points - x_min) / grid_step_mm).astype("int32"), 0, grid_width - 1
         )
         y_index = np.clip(
-            np.round((y_points - y_min) / grid_step_mm).astype("int32"),
-            0,
-            grid_height - 1,
+            np.round((y_points - y_min) / grid_step_mm).astype("int32"), 0, grid_height - 1
         )
 
         height_sum = np.zeros((grid_height, grid_width), dtype="float64")
@@ -487,6 +620,28 @@ class RasterReconstructionController:
         }
 
     @staticmethod
+    def _smooth_stitched_height_map(stitched, *, kernel_size=3):
+        """Apply a 2-D median filter to the stitched height grid.
+
+        Removes per-cell noise caused by depth quantisation and registration
+        jitter between adjacent scan targets.  Only valid (non-NaN) cells are
+        updated; cells with no data remain NaN so that missing-data regions are
+        never filled in by the filter.
+
+        *kernel_size* must be an odd positive integer; 3 (the default) smooths
+        over a neighbourhood of one cell radius without blurring real tissue
+        features, which span many cells.
+        """
+        height_map = np.asarray(stitched["height_map_mm"], dtype="float32")
+        valid = np.isfinite(height_map)
+        if not np.any(valid):
+            return stitched  # nothing to smooth
+        h_filled = np.where(valid, height_map, 0.0).astype("float32")
+        h_smoothed = cv2.medianBlur(h_filled, ksize=int(kernel_size))
+        smoothed_map = np.where(valid, h_smoothed, np.nan).astype("float32")
+        return {**stitched, "height_map_mm": smoothed_map}
+
+    @staticmethod
     def _build_stitched_topography(stitched):
         height_map = np.asarray(stitched["height_map_mm"], dtype="float32")
         valid_mask = np.asarray(stitched["valid_mask"], dtype=bool)
@@ -515,7 +670,7 @@ class RasterReconstructionController:
             "valid_pixel_count": int(valid_values.size),
             "below_plane_pixel_count": int(np.sum(valid_values < 0.0)),
             "aggregation_summary": {
-                "source": "raster_scan_samples",
+                "source": "raster_scan_targets",
                 "point_count": int(stitched["point_count"]),
                 "grid_step_mm": float(stitched["grid_step_mm"]),
             },
@@ -523,10 +678,7 @@ class RasterReconstructionController:
 
     @staticmethod
     def _write_coloured_ply(path, xyz, rgb_float):
-        """Write a binary little-endian PLY point cloud with per-point RGB colour.
-
-        ``rgb_float`` values must be in [0, 1].  No external library required.
-        """
+        """Write a binary little-endian PLY point cloud with per-point RGB colour."""
         xyz = np.asarray(xyz, dtype="float32")
         rgb = np.clip(np.asarray(rgb_float, dtype="float32") * 255, 0, 255).astype("uint8")
         n = len(xyz)
@@ -554,46 +706,6 @@ class RasterReconstructionController:
         with open(str(path), "wb") as fh:
             fh.write(header.encode("ascii"))
             fh.write(data.tobytes())
-
-    @staticmethod
-    def _height_to_rgb(heights):
-        """Map height values to RGB using a viridis-like colormap (float [0..1])."""
-        h = np.asarray(heights, dtype="float32")
-        finite = np.isfinite(h)
-        rgb = np.zeros((len(h), 3), dtype="float32")
-        if np.any(finite):
-            h_min, h_max = float(np.min(h[finite])), float(np.max(h[finite]))
-            span = h_max - h_min if h_max > h_min else 1.0
-            t = np.where(finite, (h - h_min) / span, 0.5).astype("float32")
-            # Simple viridis approximation: blue→cyan→green→yellow→red
-            rgb[:, 0] = np.clip(1.5 * t - 0.25, 0, 1)                    # R
-            rgb[:, 1] = np.clip(np.sin(t * np.pi), 0, 1)                  # G
-            rgb[:, 2] = np.clip(1.0 - 1.5 * t + 0.25, 0, 1)              # B
-        return rgb
-
-    @staticmethod
-    def _line_index_to_rgb(line_indices):
-        """Map scan line indices to distinct RGB colours (tab10 palette)."""
-        # 10 visually distinct colours
-        palette = np.array([
-            [0.122, 0.467, 0.706],
-            [1.000, 0.498, 0.055],
-            [0.173, 0.627, 0.173],
-            [0.839, 0.153, 0.157],
-            [0.580, 0.404, 0.741],
-            [0.549, 0.337, 0.294],
-            [0.890, 0.467, 0.761],
-            [0.498, 0.498, 0.498],
-            [0.737, 0.741, 0.133],
-            [0.090, 0.745, 0.812],
-        ], dtype="float32")
-        indices = np.asarray(line_indices, dtype="int32")
-        # Negative indices (travel moves with no line) → grey
-        valid = indices >= 0
-        rgb = np.full((len(indices), 3), 0.5, dtype="float32")
-        if np.any(valid):
-            rgb[valid] = palette[indices[valid] % len(palette)]
-        return rgb
 
     @staticmethod
     def _save_density_outputs(*, bundle_path, sample_count_map, valid_mask):

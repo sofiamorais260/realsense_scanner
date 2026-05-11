@@ -2432,6 +2432,9 @@ class MainWindow(QMainWindow):
         )
         self._update_grbl_position_labels(self.grbl_scanner_position)
         self._update_grbl_position_labels(self.grbl_machine_position, prefix="grbl_work_")
+        # Re-evaluate which GRBL controls can be used now that a fresh status
+        # frame may have armed limits and captured the post-home reference.
+        self._refresh_grbl_status_widgets()
         if self.raster_scan_active and self.raster_scan_run_state is not None:
             try:
                 self.raster_scan_artifact_controller.append_motion_sample(
@@ -4032,6 +4035,7 @@ class MainWindow(QMainWindow):
         limited_move_spec, limit_message = self._apply_grbl_work_limits_to_relative_move(move_spec)
         if limited_move_spec is None:
             message = limit_message or "Raster scan step blocked by machine limits."
+            print(message)
             self.statusbar.showMessage(message)
             self._set_grbl_monitor_status_text(message)
             self._finish_raster_scan(status="blocked", message=message, unblock_joystick=True)

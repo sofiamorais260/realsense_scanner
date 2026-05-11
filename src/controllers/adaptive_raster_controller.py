@@ -17,6 +17,11 @@ class AdaptiveRasterController:
     MIN_SEGMENT_LENGTH_MM = 1.0
     DEFAULT_TRAVEL_CLEARANCE_MM = 15.0
     DEFAULT_PROBE_SAFETY_MARGIN_MM = 0.5
+    # Clearance added above max(current-row-end-Z, next-row-start-Z) for the
+    # per-row inter-row transit.  Much smaller than DEFAULT_TRAVEL_CLEARANCE_MM
+    # because we are transitioning between known adjacent scan heights, not from
+    # an arbitrary starting position to the global peak.
+    DEFAULT_INTER_ROW_CLEARANCE_MM = 5.0
     # Physical carriage geometry (measured on the actual hardware).
     # The carriage body extends to the LEFT of the probe tip and sits above it.
     # These constants are used to raise the scan Z when a taller adjacent surface
@@ -155,10 +160,25 @@ class AdaptiveRasterController:
                     n_shadow,
                     dtype="float64",
                 )
+                # Shadow is sampled at segment START POINTS, not midpoints.
+                #
+                # Why this matters for collision safety:
+                #   When the probe descends from band A (Z_high) to band B (Z_low),
+                #   the carriage must descend vertically at the segment entry position
+                #   before scanning horizontally (see build_execution_sequence).
+                #   That vertical descent keeps the carriage at a fixed X = entry_x,
+                #   so the carriage position during descent is exactly (entry_x - 80 mm).
+                #   Using start points here ensures that tissue at (entry_x - 80 mm)
+                #   is verified safe at Z_low BEFORE any XY motion at that height.
+                #
+                #   Since segment_width << 80 mm, the full range of carriage positions
+                #   during the subsequent horizontal scan (entry_x-80 … entry_x-80 + width)
+                #   is also covered: the NEXT segment's start-shadow picks up the far end.
+                shadow_ref_xy = tray_points_xy[:segment_count]  # shape (N, 2), one per segment start
                 shadow_tx = (
-                    midpoint_tray_points_xy[:, 0:1] - shadow_offsets[None, :]
+                    shadow_ref_xy[:, 0:1] - shadow_offsets[None, :]
                 ).reshape(-1)
-                shadow_ty = np.repeat(midpoint_tray_points_xy[:, 1], n_shadow)
+                shadow_ty = np.repeat(shadow_ref_xy[:, 1], n_shadow)
                 shadow_tray_pts = np.column_stack([shadow_tx, shadow_ty])
                 shadow_h = np.asarray(
                     surface_model_controller.sample_height_profile_mm(
@@ -167,7 +187,29 @@ class AdaptiveRasterController:
                     ),
                     dtype="float32",
                 ).reshape(segment_count, n_shadow)
-                # NaN means the shadow point is outside the ROI — safe to ignore.
+                # Shadow NaN handling — CRITICAL for carriage safety.
+                #
+                # A NaN shadow sample means that point is OUTSIDE the measured ROI.
+                # Outside-ROI space is uncharted: it may contain the specimen
+                # container wall, formalin bath edge, an adjacent specimen, or
+                # other physical obstacles taller than the tissue inside the ROI.
+                #
+                # Previous behaviour: treat NaN as safe (-inf floor) — WRONG.
+                # The carriage can extend up to 80 mm to the left of the probe,
+                # so the first ~80 mm of every left-starting row and the entire
+                # XY approach to the ROI involve uncharted shadow space.  Treating
+                # that as obstacle-free caused the real collisions the user observed
+                # when moving to the ROI start and at the beginning of the X sweep.
+                #
+                # Correct behaviour: when ANY shadow sample for a segment lands
+                # outside the ROI (NaN), the probe must stay at or above
+                # global_peak_probe_target_mm — the highest scan Z in the ROI.
+                # That ensures the carriage bottom is at least as high as the
+                # tallest tissue + standoff margin.  It will NOT protect against
+                # an obstacle taller than the ROI peak (e.g. a very tall container
+                # wall), but it is the best conservative estimate available from
+                # the surface model alone.
+                has_outside_roi = np.any(~np.isfinite(shadow_h), axis=1)  # (N,)
                 with np.errstate(all="ignore"):
                     shadow_peak_mm = np.where(
                         np.any(np.isfinite(shadow_h), axis=1),
@@ -175,15 +217,23 @@ class AdaptiveRasterController:
                             np.where(np.isfinite(shadow_h), shadow_h, -np.inf),
                             axis=1,
                         ),
-                        np.nan,
+                        0.0,  # all-NaN row: no in-ROI tissue — will be overridden below
                     ).astype("float32")
-                # Minimum probe clearance (above tray) so carriage bottom clears
-                # the shadow peak: probe_z >= shadow_peak - carriage_above_fiber_mm
-                carriage_floor_mm = np.where(
-                    np.isfinite(shadow_peak_mm),
-                    shadow_peak_mm - float(carriage_above_fiber_mm),
-                    -np.inf,
+                # Minimum probe clearance so carriage bottom clears the shadow peak.
+                carriage_floor_mm = (
+                    shadow_peak_mm - float(carriage_above_fiber_mm)
                 ).astype("float32")
+                # Segments whose shadow exits the ROI: enforce the global peak
+                # clearance so we never descend into uncharted space.
+                if np.any(has_outside_roi):
+                    carriage_floor_mm = np.where(
+                        has_outside_roi,
+                        np.maximum(
+                            carriage_floor_mm,
+                            float(global_peak_probe_target_mm),
+                        ),
+                        carriage_floor_mm,
+                    ).astype("float32")
                 target_clearance_mm = np.maximum(
                     local_target_clearance_mm, carriage_floor_mm
                 ).astype("float32")
@@ -452,8 +502,25 @@ class AdaptiveRasterController:
         scan_feedrate_mm_per_min,
         travel_feedrate_mm_per_min,
         travel_clearance_mm=DEFAULT_TRAVEL_CLEARANCE_MM,
+        inter_row_clearance_mm=DEFAULT_INTER_ROW_CLEARANCE_MM,
     ):
-        """Build safe per-segment relative moves for a surface-following raster scan."""
+        """Build safe per-segment relative moves for a surface-following raster scan.
+
+        The global *safe_travel_z_mm* (computed as max_scan_Z + travel_clearance_mm)
+        is used only for the initial approach to the first row and the final departure
+        after the last row.  For all inter-row transits an adaptive, per-row transit Z
+        is used instead:
+
+            row_transit_z = max(end_of_row_N_z, start_of_row_{N+1}_z) + inter_row_clearance_mm
+
+        This keeps vertical travel proportional to the actual height change between
+        adjacent rows rather than always climbing to the global scan peak, which:
+          - Eliminates the carriage collision risk from over-travel when the scanner
+            frame limits physical Z travel below the global safe Z.
+          - Dramatically reduces inter-row travel time on scans with large height
+            variation across the ROI (e.g. was 48 mm of Z travel per transition for a
+            Z=3–12 mm scan; now typically 5–17 mm).
+        """
         current_position = self._sanitize_axis_position(current_scanner_position_mm)
         if current_position is None:
             raise RasterScanError("The current scanner position is not available yet.")
@@ -469,6 +536,7 @@ class AdaptiveRasterController:
             float(current_position["z"]),
             max_target_machine_z_mm + float(travel_clearance_mm),
         )
+        inter_row_clearance_mm = max(0.0, float(inter_row_clearance_mm))
         scan_feedrate_mm_per_min = max(1e-6, float(scan_feedrate_mm_per_min))
         travel_feedrate_mm_per_min = max(1e-6, float(travel_feedrate_mm_per_min))
 
@@ -495,7 +563,7 @@ class AdaptiveRasterController:
                 from_point=cursor,
                 to_point={"x": first_start["x"], "y": first_start["y"], "z": cursor["z"]},
                 feedrate_mm_per_min=travel_feedrate_mm_per_min,
-                label=f"Move to raster row {row_number} start at safe Z",
+                label=f"Move to raster row {row_number} start",
                 step_kind="travel",
                 step_index=len(sequence),
                 scan_line_index=int(line["row_index"]),
@@ -514,10 +582,50 @@ class AdaptiveRasterController:
             )
 
             for segment_index, segment in enumerate(segments, start=1):
+                seg_end = dict(segment["end_machine_point_mm"])
+                seg_start = dict(segment["start_machine_point_mm"])
+
+                # Carriage-safe band transition: when the probe must DESCEND to a
+                # lower Z band, do NOT execute the move as a single diagonal (XY + Z
+                # simultaneously).  A diagonal descent sweeps the carriage body
+                # through intermediate heights that are only verified safe at the
+                # HIGHER (old) band's Z — the lower new-band shadow check covers
+                # tissue at the segment-start XY, not the swept intermediate arc.
+                #
+                # Solution: split into two steps —
+                #   1. Vertical descent at the segment-entry XY position (cursor XY).
+                #      The shadow plan has verified tissue at (entry_x − 80 mm) for
+                #      the new Z, so the carriage is stationary above a checked strip
+                #      throughout the descent.
+                #   2. Horizontal scan to the segment end at the new constant Z.
+                #
+                # Ascending transitions are safe without a split: the carriage bottom
+                # rises throughout, so the lowest clearance is at the start (already
+                # verified by the previous band).
+                if seg_end["z"] < cursor["z"] - self.POSITION_EPSILON_MM:
+                    cursor = self._append_move_step(
+                        sequence,
+                        from_point=cursor,
+                        to_point={
+                            "x": seg_start["x"],
+                            "y": seg_start["y"],
+                            "z": seg_end["z"],
+                        },
+                        feedrate_mm_per_min=travel_feedrate_mm_per_min,
+                        label=(
+                            f"Descend vertically to Z={seg_end['z']:.2f} mm "
+                            f"at row {row_number} band entry "
+                            f"(carriage-safe — no XY sweep during descent)"
+                        ),
+                        step_kind="travel",
+                        step_index=len(sequence),
+                        scan_line_index=int(line["row_index"]),
+                    )
+
                 cursor = self._append_move_step(
                     sequence,
                     from_point=cursor,
-                    to_point=dict(segment["end_machine_point_mm"]),
+                    to_point=seg_end,
                     feedrate_mm_per_min=scan_feedrate_mm_per_min,
                     label=(
                         f"Scan raster row {row_number}/{len(scan_lines)} "
@@ -536,12 +644,40 @@ class AdaptiveRasterController:
                     completes_scan_line=(segment_index == len(segments)),
                 )
 
+            # Determine the Z height needed for the transit after this row.
+            # The last row uses the global safe_travel_z_mm so the scanner parks at a
+            # known safe position.  All intermediate rows use a minimal per-row transit
+            # Z: just enough to clear both this row's final probe position and the next
+            # row's first probe position, plus the inter_row_clearance_mm margin.
+            is_last_row = (row_number == len(scan_lines))
+            if is_last_row:
+                row_raise_z_mm = safe_travel_z_mm
+                raise_label = f"Raise scanner after raster row {row_number} to safe Z ({safe_travel_z_mm:.1f} mm)"
+            else:
+                # row_number is 1-based; scan_lines is 0-based, so scan_lines[row_number] is
+                # the NEXT row (index = row_number, which equals the 0-based next-row index).
+                next_line = scan_lines[row_number]
+                next_row_segments = list(next_line.get("segments") or [])
+                next_row_first_z = (
+                    float(next_row_segments[0]["start_machine_point_mm"]["z"])
+                    if next_row_segments
+                    else float(cursor["z"])
+                )
+                current_row_end_z = float(cursor["z"])
+                row_raise_z_mm = (
+                    max(current_row_end_z, next_row_first_z) + inter_row_clearance_mm
+                )
+                raise_label = (
+                    f"Raise scanner after raster row {row_number} "
+                    f"(inter-row transit {row_raise_z_mm:.1f} mm → row {row_number + 1})"
+                )
+
             cursor = self._append_move_step(
                 sequence,
                 from_point=cursor,
-                to_point={"x": cursor["x"], "y": cursor["y"], "z": safe_travel_z_mm},
+                to_point={"x": cursor["x"], "y": cursor["y"], "z": row_raise_z_mm},
                 feedrate_mm_per_min=travel_feedrate_mm_per_min,
-                label=f"Raise scanner after raster row {row_number}",
+                label=raise_label,
                 step_kind="travel",
                 step_index=len(sequence),
                 scan_line_index=int(line["row_index"]),
@@ -551,6 +687,7 @@ class AdaptiveRasterController:
             "scan_mode": "surface_following",
             "current_scanner_position_mm": dict(current_position),
             "safe_travel_z_mm": float(safe_travel_z_mm),
+            "inter_row_clearance_mm": float(inter_row_clearance_mm),
             "scan_feedrate_mm_per_min": float(scan_feedrate_mm_per_min),
             "travel_feedrate_mm_per_min": float(travel_feedrate_mm_per_min),
             "step_count": int(len(sequence)),
@@ -677,16 +814,10 @@ class AdaptiveRasterController:
                 ),
                 "point_id": (None if point_id is None else str(point_id)),
                 "tray_start_point_mm": (
-                    None if tray_start_point_mm is None else {
-                        "x": float(tray_start_point_mm["x"]),
-                        "y": float(tray_start_point_mm["y"]),
-                    }
+                    None if tray_start_point_mm is None else dict(tray_start_point_mm)
                 ),
                 "target_tray_point_mm": (
-                    None if target_tray_point_mm is None else {
-                        "x": float(target_tray_point_mm["x"]),
-                        "y": float(target_tray_point_mm["y"]),
-                    }
+                    None if target_tray_point_mm is None else dict(target_tray_point_mm)
                 ),
                 "completes_scan_line": bool(completes_scan_line),
                 "move_spec": {
@@ -706,8 +837,9 @@ class AdaptiveRasterController:
 
     @staticmethod
     def _estimate_sequence_duration_seconds(sequence):
+        """Estimate total scan duration in seconds from move lengths and feedrates."""
         duration_s = 0.0
-        for step in list(sequence or []):
+        for step in sequence:
             move_length_mm = float(step.get("move_length_mm", 0.0) or 0.0)
             feedrate_mm_per_min = float(
                 (step.get("move_spec") or {}).get("feedrate", 0.0) or 0.0

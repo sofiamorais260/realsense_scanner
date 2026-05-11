@@ -41,7 +41,9 @@ class GRBLWorkflowController:
     JOYSTICK_XY_ACTIVE_FRACTION_LEVELS = (0.30, 0.62, 1.0)
     JOYSTICK_Z_ACTIVE_FRACTION_LEVELS = (1.0,)
     # Match the packet sizes validated in manual UGS testing so joystick jogs
-    # use the same travel increments and only vary feedrate.
+    # use the same travel increments and only vary feedrate. This assumes the
+    # controller-side GRBL acceleration has already been tuned for short $J jogs;
+    # see docs/grbl_tuning.md for the rationale and values used in this project.
     JOYSTICK_XY_STEP_MM = 5.0
     JOYSTICK_Z_STEP_MM = 2.0
     GRBL_MACHINE_LIMITS_MM = {

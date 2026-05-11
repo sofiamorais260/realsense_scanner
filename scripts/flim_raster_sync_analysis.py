@@ -15,7 +15,7 @@ This script bridges the two by:
   1. Reconstructing absolute Unix timestamps for every FLIM log entry:
          t_abs[N] = t_flim_start_unix + log_time[N]
      where:
-         t_flim_start_unix = (acquisition_date_local - 1h to UTC) - max(log_times)
+         t_flim_start_unix = timestamp(acquisition_date_local) - max(log_times)
   2. Linearly interpolating the scanner's machine-space (X, Y, Z) position
      at each FLIM timestamp from the raster scan_samples.csv.
   3. Computing centre-of-mass (CoM) lifetime (ps) and integrated intensity
@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import json
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import h5py
@@ -103,7 +103,6 @@ PAIRS = [
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-UTC_OFFSET_HOURS   = 1      # Portugal WEST summer time (April = UTC+1)
 BACKGROUND_BINS    = 10     # leading bins used for background subtraction
 MIN_TOTAL_COUNTS   = 10     # measurements below this are treated as no signal
 MAX_INTERP_GAP_S   = 5.0    # flag interpolated positions farther than this from
@@ -118,15 +117,16 @@ def estimate_flim_start_unix(flim_dir: Path) -> tuple[float, float]:
     """Return (flim_start_unix, flim_stop_unix) in UTC epoch seconds.
 
     pyProbe stores acquisition_date = datetime.now() at STOP time in local
-    time.  We convert to UTC by subtracting UTC_OFFSET_HOURS hours, then
-    subtract the total elapsed time from the log to get the start time.
+    time.  datetime.timestamp() already interprets that local wall time on
+    the current machine, so we should not manually subtract an extra
+    timezone offset here. We then subtract the total elapsed time from the
+    log to get the start time.
     """
     with h5py.File(flim_dir / "ch1.h5", "r") as f:
         acq_date_str = str(f["metadata"].attrs["acquisition_date"])
 
     flim_stop_local = datetime.fromisoformat(acq_date_str)
-    flim_stop_utc   = flim_stop_local - timedelta(hours=UTC_OFFSET_HOURS)
-    flim_stop_unix  = flim_stop_utc.timestamp()
+    flim_stop_unix  = flim_stop_local.timestamp()
 
     log = _load_log(flim_dir)
     flim_duration   = float(log[-1, 2])          # last monotonic timestamp

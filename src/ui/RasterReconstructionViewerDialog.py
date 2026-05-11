@@ -157,7 +157,7 @@ class RasterReconstructionViewerDialog(QDialog):
             "Shows the tissue texture and colour in true 3D."
         )
         btn_rgb.clicked.connect(
-            lambda: self._launch_point_cloud_viewer("point_cloud_rgb_ply_path", "Camera RGB")
+            lambda: self._launch_point_cloud_viewer("point_cloud_ply_path", "Camera RGB")
         )
         layer_layout.addWidget(btn_rgb)
 
@@ -167,7 +167,7 @@ class RasterReconstructionViewerDialog(QDialog):
             "Blue = low, yellow/green = high. Best for topography."
         )
         btn_height.clicked.connect(
-            lambda: self._launch_point_cloud_viewer("point_cloud_height_ply_path", "Height")
+            lambda: self._launch_npz_layer_viewer("height", "Height")
         )
         layer_layout.addWidget(btn_height)
 
@@ -177,7 +177,7 @@ class RasterReconstructionViewerDialog(QDialog):
             "Useful to check scan coverage and density."
         )
         btn_lines.clicked.connect(
-            lambda: self._launch_point_cloud_viewer("point_cloud_lines_ply_path", "Scan Lines")
+            lambda: self._launch_npz_layer_viewer("lines", "Scan Lines")
         )
         layer_layout.addWidget(btn_lines)
 
@@ -198,8 +198,45 @@ class RasterReconstructionViewerDialog(QDialog):
         tab.setLayout(layout)
         return tab
 
+    def _launch_npz_layer_viewer(self, layer, layer_name):
+        """Generate a coloured PLY from point_cloud.npz on demand, then open it.
+
+        The generated PLY is cached alongside the NPZ (e.g. ``*_height.ply``)
+        so subsequent opens are instant.  *layer* is one of ``"height"`` or
+        ``"lines"``.
+        """
+        npz_key = "point_cloud_npz_path"
+        npz_path = self.output_paths.get(npz_key)
+        if not npz_path or not Path(str(npz_path)).exists():
+            self._point_cloud_status.setText(
+                f"Point cloud NPZ not found — re-run the reconstruction to generate it."
+            )
+            return
+
+        npz_path = Path(str(npz_path))
+        ply_path = npz_path.parent / f"{npz_path.stem}_{layer}.ply"
+        if not ply_path.exists():
+            try:
+                self._point_cloud_status.setText(
+                    f"Generating '{layer_name}' colour layer from NPZ…"
+                )
+                data = np.load(str(npz_path))
+                xyz = data["xyz"]
+                if layer == "height":
+                    rgb = self._height_to_rgb(xyz[:, 2])
+                else:
+                    rgb = self._line_index_to_rgb(data["line_index"])
+                self._write_coloured_ply(ply_path, xyz, rgb)
+            except Exception as exc:
+                self._point_cloud_status.setText(
+                    f"Failed to generate '{layer_name}' PLY: {exc}"
+                )
+                return
+
+        self._launch_point_cloud_viewer_path(str(ply_path), layer_name)
+
     def _launch_point_cloud_viewer(self, ply_key, layer_name):
-        """Launch the Open3D point cloud viewer in a subprocess for the given PLY file."""
+        """Launch the Open3D point cloud viewer for a PLY stored in output_paths."""
         ply_path = self.output_paths.get(ply_key)
         if not ply_path or not Path(str(ply_path)).exists():
             self._point_cloud_status.setText(
@@ -208,8 +245,11 @@ class RasterReconstructionViewerDialog(QDialog):
                 "was done after this session's colour-frame save was enabled."
             )
             return
+        self._launch_point_cloud_viewer_path(str(ply_path), layer_name)
 
-        ply_path_str = str(Path(ply_path)).replace("\\", "\\\\")
+    def _launch_point_cloud_viewer_path(self, ply_path_str_in, layer_name):
+        """Open an Open3D viewer subprocess for a PLY at the given path."""
+        ply_path_str = str(Path(ply_path_str_in)).replace("\\", "\\\\")
         viewer_code = (
             "import sys\n"
             "try:\n"
@@ -233,7 +273,7 @@ class RasterReconstructionViewerDialog(QDialog):
             )
             self._point_cloud_status.setText(
                 f"Opening '{layer_name}' point cloud viewer…\n"
-                f"File: {ply_path}\n\n"
+                f"File: {ply_path_str_in}\n\n"
                 "Controls in the viewer window:\n"
                 "  • Left-drag  →  orbit\n"
                 "  • Right-drag →  pan\n"
@@ -538,6 +578,69 @@ class RasterReconstructionViewerDialog(QDialog):
         for key, value in sorted(self.output_paths.items()):
             lines.append(f"{key}: {self._format_output_value(value)}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_output_value(value):
+        if value is None:
+            return "N/A"
+        return str(value)
+
+    # ── Static helpers for on-demand layer PLY generation ─────────────────────
+
+    @staticmethod
+    def _height_to_rgb(heights):
+        """Map height values to RGB using a viridis-like colormap (float [0..1])."""
+        h = np.asarray(heights, dtype="float32")
+        finite = np.isfinite(h)
+        rgb = np.zeros((len(h), 3), dtype="float32")
+        if np.any(finite):
+            h_min = float(np.min(h[finite]))
+            h_max = float(np.max(h[finite]))
+            span = h_max - h_min if h_max > h_min else 1.0
+            t = np.where(finite, (h - h_min) / span, 0.5).astype("float32")
+            rgb[:, 0] = np.clip(1.5 * t - 0.25, 0, 1)           # R
+            rgb[:, 1] = np.clip(np.sin(t * np.pi), 0, 1)         # G
+            rgb[:, 2] = np.clip(1.0 - 1.5 * t + 0.25, 0, 1)     # B
+        return rgb
+
+    @staticmethod
+    def _line_index_to_rgb(line_indices):
+        """Map scan line indices to distinct RGB colours (tab10 palette)."""
+        palette = np.array([
+            [0.122, 0.467, 0.706], [1.000, 0.498, 0.055],
+            [0.173, 0.627, 0.173], [0.839, 0.153, 0.157],
+            [0.580, 0.404, 0.741], [0.549, 0.337, 0.294],
+            [0.890, 0.467, 0.761], [0.498, 0.498, 0.498],
+            [0.737, 0.741, 0.133], [0.090, 0.745, 0.812],
+        ], dtype="float32")
+        indices = np.asarray(line_indices, dtype="int32")
+        valid = indices >= 0
+        rgb = np.full((len(indices), 3), 0.5, dtype="float32")
+        if np.any(valid):
+            rgb[valid] = palette[indices[valid] % len(palette)]
+        return rgb
+
+    @staticmethod
+    def _write_coloured_ply(path, xyz, rgb_float):
+        """Write a binary little-endian PLY point cloud with per-point RGB colour."""
+        xyz = np.asarray(xyz, dtype="float32")
+        rgb = np.clip(np.asarray(rgb_float, dtype="float32") * 255, 0, 255).astype("uint8")
+        n = len(xyz)
+        header = (
+            "ply\nformat binary_little_endian 1.0\n"
+            f"element vertex {n}\n"
+            "property float x\nproperty float y\nproperty float z\n"
+            "property uchar red\nproperty uchar green\nproperty uchar blue\n"
+            "end_header\n"
+        )
+        dtype = np.dtype([("x", "f4"), ("y", "f4"), ("z", "f4"),
+                          ("r", "u1"), ("g", "u1"), ("b", "u1")])
+        data = np.empty(n, dtype=dtype)
+        data["x"] = xyz[:, 0]; data["y"] = xyz[:, 1]; data["z"] = xyz[:, 2]
+        data["r"] = rgb[:, 0]; data["g"] = rgb[:, 1]; data["b"] = rgb[:, 2]
+        with open(str(path), "wb") as fh:
+            fh.write(header.encode("ascii"))
+            fh.write(data.tobytes())
 
     def _format_output_value(self, value):
         if isinstance(value, (str, Path)):
