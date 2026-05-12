@@ -211,7 +211,19 @@ class GRBLWorker(QObject):
         was_monitor_enabled = self.monitor_enabled
         self._set_monitor_enabled(False)
 
+        # Collect position snapshots here in the worker thread so they are
+        # available even when the main thread's Qt event queue is saturated
+        # (e.g. by video frame processing) and cannot drain status_received
+        # signals in real-time.  Each entry is a plain dict; the whole list is
+        # passed back in the command_completed payload for the main thread to
+        # flush to the motion log CSV after streaming finishes.
+        import time as _time
+        _MOTION_SAMPLE_INTERVAL_S = 0.10   # 10 Hz — matches MOTION_LOG_INTERVAL_S
+        _position_log: list = []
+        _last_logged = 0.0
+
         def _status_callback(status_line):
+            nonlocal _last_logged
             parsed = self.controller.parse_status_line(status_line)
             parsed.update({
                 "success": True,
@@ -222,6 +234,20 @@ class GRBLWorker(QObject):
                 "log_lines": [f"RX (stream): {status_line}"],
             })
             self.status_received.emit(parsed)
+
+            # Buffer position for later motion log flush — rate-limited to 10 Hz
+            now = _time.time()
+            if now - _last_logged >= _MOTION_SAMPLE_INTERVAL_S:
+                mpos = parsed.get("mpos")
+                if isinstance(mpos, dict):
+                    _position_log.append({
+                        "timestamp_unix_s": now,
+                        "grbl_state": parsed.get("state"),
+                        "machine_x_mm": mpos.get("x"),
+                        "machine_y_mm": mpos.get("y"),
+                        "machine_z_mm": mpos.get("z"),
+                    })
+                    _last_logged = now
 
         success, message, stream_payload = self.controller.stream_gcode(
             commands,
@@ -238,6 +264,7 @@ class GRBLWorker(QObject):
             "payload": {
                 **stream_payload,
                 "metadata": metadata,
+                "position_log": _position_log,
             },
             "connected": self.controller.is_connected(),
             "port": self.controller.connected_port,

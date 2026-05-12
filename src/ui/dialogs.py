@@ -289,7 +289,6 @@ class RasterScanDialog(QDialog):
         default_row_banding_mode,
         default_scan_feedrate_mm_per_min,
         default_travel_feedrate_mm_per_min,
-        default_safe_travel_z_mm,
         default_travel_clearance_mm=15.0,
         surface_following_enabled=False,
         summary_builder=None,
@@ -351,7 +350,7 @@ class RasterScanDialog(QDialog):
 
         standoff_hint = QLabel(
             "Surface-following mode keeps the probe above the measured tissue surface. "
-            "Use fibre stand-off as the desired probe spacing above tissue."
+            "Stand-off 0 mm is valid — the safety margin below ensures the probe never touches."
         )
         standoff_hint.setWordWrap(True)
         standoff_hint.setStyleSheet("color: gray; font-size: 10px;")
@@ -387,12 +386,6 @@ class RasterScanDialog(QDialog):
         self.travel_feedrate_spin.setValue(float(default_travel_feedrate_mm_per_min))
         form_layout.addRow("Travel feedrate (mm/min):", self.travel_feedrate_spin)
 
-        self.safe_travel_z_spin = QDoubleSpinBox()
-        self.safe_travel_z_spin.setDecimals(3)
-        self.safe_travel_z_spin.setRange(0.0, 1000.0)
-        self.safe_travel_z_spin.setValue(float(default_safe_travel_z_mm))
-        form_layout.addRow("Safe travel Z (mm):", self.safe_travel_z_spin)
-
         self.travel_clearance_spin = QDoubleSpinBox()
         self.travel_clearance_spin.setDecimals(1)
         self.travel_clearance_spin.setRange(5.0, 100.0)
@@ -403,16 +396,6 @@ class RasterScanDialog(QDialog):
             "Must be large enough so the carriage arm (left of the probe) clears the specimen."
         )
         form_layout.addRow("Carriage clearance above specimen:", self.travel_clearance_spin)
-
-        self.dwell_spin = QSpinBox()
-        self.dwell_spin.setRange(0, 5000)
-        self.dwell_spin.setValue(0)
-        self.dwell_spin.setSuffix(" ms  (0 = continuous)")
-        self.dwell_spin.setToolTip(
-            "When non-zero, the scanner stops and waits at each settled scan point "
-            "before moving to the next one. Use this for step-and-dwell FLIM acquisition."
-        )
-        form_layout.addRow("Dwell time per point:", self.dwell_spin)
 
         self.run_label_edit = QLineEdit()
         self.run_label_edit.setPlaceholderText("optional label, e.g. sample_A1")
@@ -449,11 +432,9 @@ class RasterScanDialog(QDialog):
             self.probe_safety_margin_spin,
             self.scan_feedrate_spin,
             self.travel_feedrate_spin,
-            self.safe_travel_z_spin,
             self.travel_clearance_spin,
         ):
             spinbox.valueChanged.connect(self.refresh_summary)
-        self.dwell_spin.valueChanged.connect(self.refresh_summary)
         self.row_banding_combo.currentIndexChanged.connect(self.refresh_summary)
 
         self.refresh_summary()
@@ -488,9 +469,9 @@ class RasterScanDialog(QDialog):
             "probe_safety_margin_mm": float(self.probe_safety_margin_spin.value()),
             "scan_feedrate_mm_per_min": float(self.scan_feedrate_spin.value()),
             "travel_feedrate_mm_per_min": float(self.travel_feedrate_spin.value()),
-            "safe_travel_z_mm": float(self.safe_travel_z_spin.value()),
+            "safe_travel_z_mm": 3.0,  # auto-overridden by resolve_safe_travel_z_mm
             "travel_clearance_mm": float(self.travel_clearance_spin.value()),
-            "dwell_ms": int(self.dwell_spin.value()),
+            "dwell_ms": 0,  # streaming mode: continuous only
             "run_label": str(self.run_label_edit.text()).strip(),
             "keep_run": bool(self.keep_run_checkbox.isChecked()),
             "scan_mode": (

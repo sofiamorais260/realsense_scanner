@@ -129,6 +129,7 @@ class RasterScanArtifactController:
         settings,
         depth_scale_mm,
         aligned_depth_intrinsics,
+        planned_frame_color=None,
     ):
         settings = dict(settings or {})
         run_id = uuid.uuid4().hex
@@ -153,12 +154,19 @@ class RasterScanArtifactController:
         self._write_event_csv_header(event_csv_path)
         self._write_step_settled_csv_header(step_settled_csv_path)
 
+        # Use the frame captured when the dialog opened for planned overlays
+        # so the image shows what the camera saw before any motion started.
+        overlay_source_frame = (
+            np.asarray(planned_frame_color).copy()
+            if planned_frame_color is not None
+            else full_frame_color
+        )
         image_segments = self._build_scan_line_image_segments(
             scan_plan=scan_plan,
             calibration_payload=calibration_payload,
         )
         initial_overlay = self.draw_overlay(
-            full_frame_color,
+            overlay_source_frame,
             roi_box=roi_box,
             image_segments=image_segments,
             completed_line_count=0,
@@ -176,22 +184,7 @@ class RasterScanArtifactController:
         start_frame_path = run_dir / "start_frame.png"
         cv2.imwrite(str(start_frame_path), full_frame_color)
 
-        video_path, video_writer = self._create_video_writer(
-            run_dir=run_dir,
-            frame_shape=full_frame_color.shape,
-            name_stem="scan_preview",
-            fps=self.DEFAULT_VIDEO_FPS,
-        )
-        if video_writer is not None:
-            try:
-                video_writer.write(initial_overlay)
-            except Exception:
-                try:
-                    video_writer.release()
-                except Exception:
-                    pass
-                video_writer = None
-                video_path = None
+        video_path = None
 
         # Live footage: records the raw camera view at a natural playback speed.
         live_video_path, live_video_writer = self._create_video_writer(
@@ -237,7 +230,6 @@ class RasterScanArtifactController:
                 "planned_overlay_full": str(planned_overlay_path),
                 "planned_overlay_roi": str(planned_roi_overlay_path),
                 "start_frame": str(start_frame_path),
-                "video_path": (None if video_path is None else str(video_path)),
                 "live_video_path": (None if live_video_path is None else str(live_video_path)),
             },
             "sync_logging": {
@@ -266,9 +258,7 @@ class RasterScanArtifactController:
             "run_id": run_id,
             "scan_mode": scan_mode,
             "metadata_path": metadata_path,
-            "video_writer": video_writer,
-            "video_enabled": video_writer is not None,
-            "video_path": None if video_path is None else str(video_path),
+
             "live_video_writer": live_video_writer,
             "live_video_enabled": live_video_writer is not None,
             "live_video_path": None if live_video_path is None else str(live_video_path),
@@ -317,17 +307,6 @@ class RasterScanArtifactController:
             status_text=status_text,
         )
         run_state["last_overlay_frame"] = overlay_frame
-
-        video_writer = run_state.get("video_writer")
-        if video_writer is not None:
-            try:
-                video_writer.write(overlay_frame)
-            except Exception:
-                try:
-                    video_writer.release()
-                except Exception:
-                    pass
-                run_state["video_writer"] = None
 
         # Live footage: write the raw camera frame (not the overlay).
         live_video_writer = run_state.get("live_video_writer")
@@ -378,13 +357,6 @@ class RasterScanArtifactController:
         if final_roi_overlay is not None:
             cv2.imwrite(str(final_roi_overlay_path), final_roi_overlay)
 
-        video_writer = run_state.get("video_writer")
-        if video_writer is not None:
-            try:
-                video_writer.release()
-            except Exception:
-                pass
-
         live_video_writer = run_state.get("live_video_writer")
         if live_video_writer is not None:
             try:
@@ -407,8 +379,9 @@ class RasterScanArtifactController:
             "active_line_index": active_line_index,
         }
         metadata["final_scanner_position_mm"] = dict(final_scanner_position_mm or {})
+        sample_count = int(run_state.get("sample_count", 0))
         metadata.setdefault("sample_capture", {})
-        metadata["sample_capture"]["sample_count"] = int(run_state.get("sample_count", 0))
+        metadata["sample_capture"]["sample_count"] = sample_count
         metadata["sample_capture"]["samples"] = self._read_sample_manifest(
             run_state.get("sample_manifest_path")
         )
@@ -428,6 +401,34 @@ class RasterScanArtifactController:
                 key: str(value)
                 for key, value in dict(reconstruction_output_paths).items()
             }
+
+        # ── Clean up empty scan-sample artefacts (streaming mode) ─────────────
+        # In streaming mode no per-step depth samples are captured, so the
+        # scan_samples/ directory, scan_samples.csv, and scan_samples_manifest.json
+        # are always empty.  Remove them and strip sample_capture from the metadata
+        # so the run directory only contains files that actually have content.
+        if sample_count == 0:
+            _paths_to_remove = [
+                run_state.get("sample_csv_path"),
+                run_state.get("sample_manifest_path"),
+            ]
+            for _p in _paths_to_remove:
+                if _p:
+                    try:
+                        Path(_p).unlink(missing_ok=True)
+                    except Exception:
+                        pass
+            _samples_dir = run_state.get("samples_dir")
+            if _samples_dir:
+                try:
+                    _sd = Path(_samples_dir)
+                    if _sd.is_dir() and not any(_sd.iterdir()):
+                        _sd.rmdir()
+                except Exception:
+                    pass
+            # Remove from metadata — these keys add noise with no useful content.
+            metadata.pop("sample_capture", None)
+
         self._write_json(metadata_path, metadata)
         return metadata
 
@@ -540,8 +541,16 @@ class RasterScanArtifactController:
         current_step=None,
         active_line_index=None,
         force=False,
+        override_timestamp_unix_s=None,
     ):
-        """Append one lightweight motion-timeline row for later FLIM alignment."""
+        """Append one lightweight motion-timeline row for later FLIM alignment.
+
+        Args:
+            override_timestamp_unix_s: When supplied (e.g. flushing a position
+                log buffered in the worker thread), use this unix timestamp
+                instead of time.time().  This preserves the actual wall-clock
+                time the position was observed even if the flush happens later.
+        """
         scanner_position = self._sanitize_position(scanner_position_mm)
         if scanner_position is None:
             return False
@@ -555,7 +564,11 @@ class RasterScanArtifactController:
         ):
             return False
 
-        unix_timestamp_s = time.time()
+        unix_timestamp_s = (
+            float(override_timestamp_unix_s)
+            if override_timestamp_unix_s is not None
+            else time.time()
+        )
         machine_position = self._sanitize_position(machine_position_mm)
         work_position = self._sanitize_position(work_position_mm)
         step_payload = dict(current_step or {})
@@ -672,6 +685,13 @@ class RasterScanArtifactController:
         return True
 
     def attach_reconstruction_outputs(self, *, run_state, output_paths):
+        live_video_writer = run_state.get("live_video_writer")
+        if live_video_writer is not None:
+            try:
+                live_video_writer.release()
+            except Exception:
+                pass
+
         metadata_path = Path(run_state["metadata_path"])
         metadata = self._read_json(metadata_path)
         metadata["reconstruction"] = {
@@ -734,6 +754,13 @@ class RasterScanArtifactController:
         }
 
     def attach_reconstruction_outputs_to_run_dir(self, *, run_dir, output_paths):
+        live_video_writer = run_state.get("live_video_writer")
+        if live_video_writer is not None:
+            try:
+                live_video_writer.release()
+            except Exception:
+                pass
+
         metadata_path = Path(run_dir) / "scan_metadata.json"
         metadata = self._read_json(metadata_path)
         metadata["reconstruction"] = {

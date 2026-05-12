@@ -37,6 +37,7 @@ from src.calibration.charuco_calibration import (
     CalibrationError,
     DEFAULT_HISTORY_DIR,
     calibrate_camera_intrinsics,
+    compute_topography_map,
     detect_charuco_board,
     get_default_staircase_reference_heights_mm,
     load_calibration,
@@ -78,6 +79,9 @@ from src.controllers.raster_scan_artifact_controller import (
 )
 from src.controllers.adaptive_raster_controller import AdaptiveRasterController
 from src.controllers.raster_reconstruction_controller import RasterReconstructionController
+from src.controllers.streaming_raster_reconstruction_controller import (
+    StreamingRasterReconstructionController,
+)
 from src.controllers.raster_scan_controller import RasterScanController, RasterScanError
 from src.controllers.repeatability_controller import RepeatabilityController
 from src.controllers.roi_controller import ROIController
@@ -2195,9 +2199,11 @@ class MainWindow(QMainWindow):
         payload = payload or {}
         success = bool(payload.get("success"))
         message = str(payload.get("message") or "")
-        if message:
-            print(message)
-            self.statusbar.showMessage(message)
+        # Raw GRBL status lines (<Idle|MPos:…>) are forwarded to the GRBL
+        # monitor dialog by _handle_grbl_status_payload below.  Do NOT print
+        # them to the console or push them to the statusbar — doing so at
+        # 10 Hz causes console I/O blocking and continuous Qt repaints that
+        # compete with the camera frame display and glitch the colour stream.
         self.grbl_connected = bool(payload.get("connected", self.grbl_connected))
         self.grbl_connected_port = payload.get("port", self.grbl_connected_port)
         if success:
@@ -2406,6 +2412,15 @@ class MainWindow(QMainWindow):
                         machine_position_mm=self.grbl_machine_position,
                         work_position_mm=self.grbl_work_position,
                     )
+                    # Flush the position log collected in the worker thread
+                    # directly to the motion log CSV.  This is the primary
+                    # source of motion timing data for FLIM reconstruction
+                    # because the main thread's Qt event queue is often
+                    # saturated by camera frame processing and cannot drain
+                    # status_received signals in real-time during streaming.
+                    position_log = list(stream_payload.get("position_log") or [])
+                    if position_log:
+                        self._flush_streaming_position_log(position_log)
                     # Generate estimated raster_step_settled entries for every
                     # scan_row step.  Timestamps are approximated from the
                     # stream start time plus the cumulative motion duration
@@ -3127,7 +3142,6 @@ class MainWindow(QMainWindow):
             default_travel_feedrate_mm_per_min=(
                 self.raster_scan_controller.DEFAULT_TRAVEL_FEEDRATE_MM_PER_MIN
             ),
-            default_safe_travel_z_mm=self.raster_scan_controller.DEFAULT_TARGET_SAFE_Z_MM,
             default_travel_clearance_mm=self.adaptive_raster_controller.DEFAULT_TRAVEL_CLEARANCE_MM,
             surface_following_enabled=surface_following_enabled,
             summary_builder=self._build_raster_scan_preview_summary,
@@ -3168,6 +3182,9 @@ class MainWindow(QMainWindow):
         """
         def _go_to_start_callback(settings):
             """Build a plan from the current dialog settings and begin the transit move."""
+            # Snapshot frame at the exact moment the button is pressed.
+            if self._raster_planned_frame is None and self.camera_worker is not None                     and self.camera_worker.frame_color is not None:
+                self._raster_planned_frame = np.asarray(self.camera_worker.frame_color).copy()
             self.lock_roi()
             try:
                 scan_plan, execution = self._build_raster_scan_plan_and_execution(settings)
@@ -3199,6 +3216,7 @@ class MainWindow(QMainWindow):
             go_to_start_callback=_go_to_start_callback,
         )
         self.raster_scan_dialog = dialog
+        self._raster_planned_frame = None  # reset; set when first button is pressed
         if dialog.exec_() != QDialog.Accepted:
             self.statusbar.showMessage("Automatic raster scan canceled.")
             return None, None
@@ -3398,10 +3416,14 @@ class MainWindow(QMainWindow):
         """Reject surface-following scans that would violate the required fibre stand-off."""
         requested_standoff_mm = float(settings["fibre_standoff_mm"])
         requested_probe_safety_margin_mm = float(settings.get("probe_safety_margin_mm", 0.0))
-        if requested_standoff_mm <= 0.0:
+        if requested_standoff_mm < 0.0:
             raise RasterScanError(
-                "Fibre stand-off is the probe spacing above the local tissue surface. "
-                "Use a positive value such as 5.0 mm."
+                "Fibre stand-off cannot be negative."
+            )
+        if requested_standoff_mm == 0.0 and requested_probe_safety_margin_mm < 0.5:
+            raise RasterScanError(
+                "With fibre stand-off set to 0 mm, probe safety margin must be at least 0.5 mm "
+                "to avoid touching the tissue surface."
             )
         if requested_probe_safety_margin_mm < 0.0:
             raise RasterScanError(
@@ -3471,6 +3493,33 @@ class MainWindow(QMainWindow):
 
     def _build_raster_scan_preview_summary(self, settings):
         scan_plan, execution = self._build_raster_scan_plan_and_execution(settings)
+        # Show planned scan lines on the live color window so the user can
+        # verify the plan before clicking anything.
+        try:
+            frame = (
+                self.camera_worker.frame_color
+                if self.camera_worker is not None
+                else None
+            )
+            roi_box = getattr(self.camera_worker, "roi_box", None) if self.camera_worker else None
+            if frame is not None and roi_box is not None:
+                calibration_payload = self._get_active_machine_calibration_payload()
+                image_segments = self.raster_scan_artifact_controller._build_scan_line_image_segments(
+                    scan_plan=scan_plan,
+                    calibration_payload=calibration_payload,
+                )
+                overlay = self.raster_scan_artifact_controller.draw_overlay(
+                    frame,
+                    roi_box=roi_box,
+                    image_segments=image_segments,
+                    completed_line_count=0,
+                    active_line_index=None,
+                    status_text="Planned scan — review before starting",
+                )
+                cv2.imshow("color", overlay)
+                cv2.waitKey(1)
+        except Exception:
+            pass  # preview failure is non-fatal; summary text is still returned
         return self.raster_scan_controller.build_plan_summary_text(
             scan_plan=scan_plan,
             execution_sequence=execution,
@@ -3503,20 +3552,32 @@ class MainWindow(QMainWindow):
             settings=artifact_settings,
             depth_scale_mm=getattr(self.camera_worker, "depth_scale_mm", 1.0),
             aligned_depth_intrinsics=aligned_depth_intrinsics,
+            planned_frame_color=getattr(self, "_raster_planned_frame", None),
         )
         self.raster_scan_run_state = run_state
         self.latest_raster_scan_run_dir = run_state["run_dir"]
         self.raster_scan_started_at_monotonic = time.monotonic()
 
-        # ── Topographic depth map ─────────────────────────────────────────────
+        # ── Pre-scan depth frame + topography map ────────────────────────────
         # Capture one full RealSense depth frame before motion starts.  This is
         # the primary spatial reference for FLIM reconstruction: the scanner moves
         # continuously in streaming mode (no per-step pause for individual depth
         # captures), so this single pre-scan frame serves as the tissue surface
         # height map for the entire measurement session.
+        #
+        # When scan calibration is available (xy_homography + plane_model + z_scale)
+        # we convert the raw depth to a calibrated height-above-tray map in mm —
+        # the same quantity the GUI "topography" button computes — and save both
+        # the height array (.npy) and a colour-mapped figure (.png) with a mm
+        # scale bar.  Without calibration we fall back to a raw depth preview so
+        # the file is always present.
         frame_depth_raw = getattr(self.camera_worker, "frame_depth", None)
         if frame_depth_raw is not None:
             try:
+                import matplotlib
+                matplotlib.use("Agg")
+                import matplotlib.pyplot as plt
+
                 run_dir = Path(run_state["run_dir"])
                 depth_array = np.asarray(frame_depth_raw, dtype="float32")
 
@@ -3524,29 +3585,88 @@ class MainWindow(QMainWindow):
                 depth_npy_path = run_dir / "depth_map.npy"
                 np.save(str(depth_npy_path), depth_array)
 
-                # Colourised preview (.png) — for quick visual inspection
-                depth_preview_path = run_dir / "depth_map_preview.png"
-                valid_mask = depth_array > 0
-                if valid_mask.any():
-                    d_min = float(depth_array[valid_mask].min())
-                    d_max = float(depth_array[valid_mask].max())
-                    if d_max > d_min:
-                        norm = np.zeros_like(depth_array)
-                        norm[valid_mask] = (
-                            (depth_array[valid_mask] - d_min) / (d_max - d_min) * 255.0
-                        )
-                        coloured = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_TURBO)
-                        coloured[~valid_mask] = 0
-                        cv2.imwrite(str(depth_preview_path), coloured)
-
-                # Register both paths in the run metadata
+                artifact_update = {"depth_map_npy": str(depth_npy_path)}
                 run_state["depth_map_npy_path"] = str(depth_npy_path)
+
+                # ── Calibrated topography map (preferred) ─────────────────────
+                _topo_saved = False
+                _topo_calib = self._get_active_scan_calibration_payload()
+                if _topo_calib is not None:
+                    try:
+                        _depth_scale_mm = float(
+                            getattr(self.camera_worker, "depth_scale_mm", 1.0) or 1.0
+                        )
+                        _intrinsics = self.camera_worker.get_aligned_depth_intrinsics() or {}
+                        _roi_box = tuple(
+                            int(v) for v in getattr(self.camera_worker, "roi_box", (0, 0, 640, 480))
+                        )
+                        topo = compute_topography_map(
+                            frame_depth=depth_array,
+                            depth_scale_mm=_depth_scale_mm,
+                            intrinsics=_intrinsics,
+                            roi_box=_roi_box,
+                            xy_homography=_topo_calib["xy_homography"],
+                            plane_model=_topo_calib["plane_model"],
+                            z_scale=_topo_calib["z_scale"],
+                            z_bias_mm=_topo_calib.get("z_bias_mm", 0.0),
+                        )
+                        height_mm = np.asarray(topo["height_map_mm"], dtype="float32")
+
+                        # Save the calibrated height array
+                        topo_npy_path = run_dir / "topography_map.npy"
+                        np.save(str(topo_npy_path), height_mm)
+
+                        # Render a matplotlib figure: height in mm with colorbar
+                        valid = np.isfinite(height_mm)
+                        if valid.any():
+                            h_min = float(np.nanmin(height_mm[valid]))
+                            h_max = float(np.nanmax(height_mm[valid]))
+                            fig, ax = plt.subplots(figsize=(7, 5), dpi=120)
+                            im = ax.imshow(
+                                np.where(valid, height_mm, np.nan),
+                                cmap="turbo",
+                                vmin=max(0.0, h_min),
+                                vmax=h_max,
+                                origin="upper",
+                                interpolation="nearest",
+                            )
+                            cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+                            cbar.set_label("Height above tray (mm)", fontsize=9)
+                            ax.set_title(
+                                f"Pre-scan topography  |  peak {h_max:.2f} mm", fontsize=10
+                            )
+                            ax.axis("off")
+                            fig.tight_layout()
+                            topo_png_path = run_dir / "topography_map.png"
+                            fig.savefig(str(topo_png_path), dpi=120, bbox_inches="tight")
+                            plt.close(fig)
+                            artifact_update["topography_map_npy"] = str(topo_npy_path)
+                            artifact_update["topography_map_png"] = str(topo_png_path)
+                            _topo_saved = True
+                    except Exception as _topo_exc:
+                        print(f"Topography map generation failed, falling back to raw preview: {_topo_exc}")
+
+                # ── Raw depth preview fallback ─────────────────────────────────
+                if not _topo_saved:
+                    depth_preview_path = run_dir / "depth_map_preview.png"
+                    valid_mask = depth_array > 0
+                    if valid_mask.any():
+                        d_min = float(depth_array[valid_mask].min())
+                        d_max = float(depth_array[valid_mask].max())
+                        if d_max > d_min:
+                            norm = np.zeros_like(depth_array)
+                            norm[valid_mask] = (
+                                (depth_array[valid_mask] - d_min) / (d_max - d_min) * 255.0
+                            )
+                            coloured = cv2.applyColorMap(norm.astype(np.uint8), cv2.COLORMAP_TURBO)
+                            coloured[~valid_mask] = 0
+                            cv2.imwrite(str(depth_preview_path), coloured)
+                            artifact_update["depth_map_preview"] = str(depth_preview_path)
+
+                # Register artifact paths in run metadata
                 metadata_path = Path(run_state["metadata_path"])
                 metadata = self.raster_scan_artifact_controller._read_json(metadata_path)
-                metadata.setdefault("artifacts", {}).update({
-                    "depth_map_npy": str(depth_npy_path),
-                    "depth_map_preview": str(depth_preview_path),
-                })
+                metadata.setdefault("artifacts", {}).update(artifact_update)
                 self.raster_scan_artifact_controller._write_json(metadata_path, metadata)
             except Exception as exc:
                 print(f"Depth map capture failed (non-fatal): {exc}")
@@ -3718,6 +3838,23 @@ class MainWindow(QMainWindow):
                     final_scanner_position_mm=self.grbl_scanner_position,
                     started_at_monotonic=self.raster_scan_started_at_monotonic,
                 )
+                # ── Streaming reconstruction ──────────────────────────────────
+                # Run automatically for completed streaming scans that have a
+                # pre-scan depth frame and full FLIM sync metadata.  Produces
+                # a 3-D point cloud, trigger→pixel map, and topography+scanpath
+                # figure — all ready for pyProbe FLIM overlay.
+                if status == "completed":
+                    try:
+                        _recon_ctrl = StreamingRasterReconstructionController()
+                        _recon_out = _recon_ctrl.reconstruct_run(
+                            run_dir=self.raster_scan_run_state["run_dir"],
+                        )
+                        print(
+                            f"Streaming reconstruction complete: "
+                            f"{_recon_out.get('reconstruction_dir')}"
+                        )
+                    except Exception as _recon_exc:
+                        print(f"Streaming reconstruction failed (non-fatal): {_recon_exc}")
                 if not should_keep_run:
                     self.raster_scan_artifact_controller.discard_run(
                         self.raster_scan_run_state
@@ -4130,6 +4267,49 @@ class MainWindow(QMainWindow):
             self.grbl_blocks_joystick_jog = False
         self._sync_grbl_monitor_polling()
 
+    def _flush_streaming_position_log(self, position_log):
+        """Write the position snapshot list collected in the GRBLWorker thread to the motion log.
+
+        During streaming the main thread's Qt event queue may be saturated by
+        camera frame processing, causing status_received signals to queue up
+        rather than being handled in real-time.  GRBLWorker therefore buffers
+        one entry per 100 ms directly in the worker thread and delivers the
+        whole list here after streaming completes.
+
+        Each entry is a dict with keys:
+            timestamp_unix_s, grbl_state, machine_x_mm, machine_y_mm, machine_z_mm
+        """
+        if not position_log or self.raster_scan_run_state is None:
+            return
+        home_ref = self.grbl_home_reference_position
+        workflow = self.grbl_workflow_controller
+        for entry in position_log:
+            try:
+                ts = float(entry.get("timestamp_unix_s") or 0)
+                mx = entry.get("machine_x_mm")
+                my = entry.get("machine_y_mm")
+                mz = entry.get("machine_z_mm")
+                if mx is None or my is None:
+                    continue
+                machine_pos = {"x": float(mx), "y": float(my), "z": float(mz or 0)}
+                scanner_pos = workflow.compute_home_relative_position(
+                    machine_position=machine_pos,
+                    home_reference_position=home_ref,
+                )
+                grbl_state = entry.get("grbl_state")
+                self.raster_scan_artifact_controller.append_motion_sample(
+                    run_state=self.raster_scan_run_state,
+                    scanner_position_mm=scanner_pos,
+                    machine_position_mm=machine_pos,
+                    grbl_state=grbl_state,
+                    current_step=None,
+                    active_line_index=None,
+                    force=True,
+                    override_timestamp_unix_s=ts,
+                )
+            except Exception as exc:
+                print(f"Streaming position log flush error: {exc}")
+
     def _write_estimated_step_settled(self, start_unix_s):
         """Write estimated raster_step_settled entries for every scan_row step.
 
@@ -4176,17 +4356,21 @@ class MainWindow(QMainWindow):
 
             tray_point = step.get("target_tray_point_mm") or {}
 
-            # scanner_position_mm must be in home-relative GRBL machine
-            # coordinates, not tray coordinates.  In streaming mode we cannot
-            # know the exact position at each step, so we use the last known
-            # GRBL-reported position (updated via status frames during the
-            # stream).  This is the same value the monitor timer would have
-            # written in step-by-step mode.
-            scanner_pos = (
-                dict(self.grbl_scanner_position)
-                if isinstance(self.grbl_scanner_position, dict)
-                else {}
-            )
+            # scanner_position_mm: use the PLANNED target position stored in the
+            # execution step, not the live GRBL position.  In streaming mode,
+            # by the time this function runs the scanner has already returned to
+            # the park/home Z, so self.grbl_scanner_position would give the
+            # same wrong value for every row.  target_scanner_position_mm is
+            # the absolute GRBL machine position the scanner was commanded to
+            # occupy at the END of this step.
+            scanner_pos = dict(step.get("target_scanner_position_mm") or {})
+            if not scanner_pos:
+                # Fallback: live position (same for every row, but better than nothing)
+                scanner_pos = (
+                    dict(self.grbl_scanner_position)
+                    if isinstance(self.grbl_scanner_position, dict)
+                    else {}
+                )
 
             row = {
                 "run_id": self.raster_scan_run_state.get("run_id"),

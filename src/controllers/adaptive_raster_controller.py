@@ -16,7 +16,7 @@ class AdaptiveRasterController:
     DEFAULT_SEGMENT_LENGTH_MM = 3.0
     MIN_SEGMENT_LENGTH_MM = 1.0
     DEFAULT_TRAVEL_CLEARANCE_MM = 15.0
-    DEFAULT_PROBE_SAFETY_MARGIN_MM = 0.5
+    DEFAULT_PROBE_SAFETY_MARGIN_MM = 1.5
     # Clearance added above max(current-row-end-Z, next-row-start-Z) for the
     # per-row inter-row transit.  Much smaller than DEFAULT_TRAVEL_CLEARANCE_MM
     # because we are transitioning between known adjacent scan heights, not from
@@ -57,11 +57,16 @@ class AdaptiveRasterController:
             raise RasterScanError("The base raster scan plan does not contain any scan lines.")
 
         standoff_mm = float(standoff_mm)
-        if standoff_mm <= 0.0:
+        if standoff_mm < 0.0:
             raise RasterScanError(
-                "Surface-following raster requires a positive fibre standoff above the tissue."
+                "Fibre standoff cannot be negative."
             )
         probe_safety_margin_mm = max(0.0, float(probe_safety_margin_mm))
+        if standoff_mm == 0.0 and probe_safety_margin_mm < 0.5:
+            raise RasterScanError(
+                "With standoff_mm = 0 a probe_safety_margin_mm of at least 0.5 mm is required "
+                "to avoid touching the tissue surface."
+            )
 
         segment_length_mm = max(float(segment_length_mm), self.MIN_SEGMENT_LENGTH_MM)
         z_band_step_mm = max(1e-3, float(z_band_step_mm))
@@ -140,8 +145,17 @@ class AdaptiveRasterController:
                 sampled_heights_mm,
                 window_size=self.DEFAULT_PROFILE_SMOOTHING_WINDOW,
             )
+            # Smoothing can pull the Z down at peaks (surrounding lower values
+            # drag the mean below the actual surface height).  For a curved
+            # specimen like a finger this error can exceed 3 mm, causing the
+            # probe to touch the tissue even with a 1.5 mm safety margin.
+            # Fix: take the element-wise max of the smoothed profile and the
+            # raw sampled profile so the clearance floor is never set below
+            # what the camera actually measured.  Smoothing still drives
+            # Z-banding in flat/slope regions; peaks are protected by the raw value.
+            peak_safe_heights_mm = np.maximum(smoothed_heights_mm, sampled_heights_mm)
             local_target_clearance_mm = (
-                smoothed_heights_mm
+                peak_safe_heights_mm
                 + float(standoff_mm)
                 + float(probe_safety_margin_mm)
             ).astype("float32")
