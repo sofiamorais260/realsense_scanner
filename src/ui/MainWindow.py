@@ -36,6 +36,7 @@ import numpy as np
 from src.calibration.charuco_calibration import (
     CalibrationError,
     DEFAULT_HISTORY_DIR,
+    build_robust_depth_frame_mm,
     calibrate_camera_intrinsics,
     compute_topography_map,
     detect_charuco_board,
@@ -125,6 +126,7 @@ class MainWindow(QMainWindow):
     STAIRCASE_REFERENCE_HEIGHTS_MM = tuple(get_default_staircase_reference_heights_mm())
     CALIBRATION_SAMPLE_COUNT = 12
     CALIBRATION_MIN_SUCCESS_COUNT = 6
+    RASTER_SURFACE_MODEL_SAMPLE_COUNT = 5
     # Keep the surface-following pipeline available but disabled while validating
     # the supervisor-facing fixed-Z XY raster + reconstruction workflow.
     RASTER_SCAN_SURFACE_FOLLOWING_ENABLED = True
@@ -272,6 +274,7 @@ class MainWindow(QMainWindow):
         self.raster_scan_run_state = None
         self.raster_scan_started_at_monotonic = None
         self.latest_raster_scan_run_dir = None
+        self._raster_planned_frame = None
         self.raster_reconstruction_workflow = RasterReconstructionWorkflow(
             reconstruction_controller=self.raster_reconstruction_controller,
             artifact_controller=self.raster_scan_artifact_controller,
@@ -1496,12 +1499,24 @@ class MainWindow(QMainWindow):
     def _on_grbl_reset_button_clicked(self):
         self._block_joystick_for_grbl_action()
         self.statusbar.showMessage("Sending GRBL soft reset...")
+        if self._send_grbl_realtime_immediate_if_motion_active(
+            command="\x18",
+            message="GRBL soft reset sent immediately.",
+            local_outcome="soft_reset",
+        ):
+            return
         self.grbl_soft_reset_requested.emit()
 
     def _on_grbl_hold_button_clicked(self):
         self._block_joystick_for_grbl_action()
         self.statusbar.showMessage("Sending GRBL feed hold...")
         self._set_grbl_monitor_status_text("Sending GRBL feed hold...")
+        if self._send_grbl_realtime_immediate_if_motion_active(
+            command="!",
+            message="GRBL feed hold sent immediately.",
+            local_outcome="hold",
+        ):
+            return
         self.grbl_hold_requested.emit()
 
     def _on_grbl_resume_button_clicked(self):
@@ -1513,7 +1528,101 @@ class MainWindow(QMainWindow):
         self._block_joystick_for_grbl_action()
         self.statusbar.showMessage("Sending GRBL EMERGENCY STOP...")
         self._set_grbl_monitor_status_text("Sending GRBL EMERGENCY STOP...")
+        if self._send_grbl_realtime_immediate_if_motion_active(
+            command="\x18",
+            message="GRBL EMERGENCY STOP sent immediately.",
+            local_outcome="emergency_stop",
+        ):
+            return
         self.grbl_emergency_stop_requested.emit()
+
+    def _has_active_grbl_motion_workflow(self):
+        return bool(
+            self.raster_scan_active
+            or self.grbl_recover_to_fov_requested
+            or self.prepared_raster_controller.has_active_roi_start_motion()
+        )
+
+    def _send_grbl_realtime_immediate_if_motion_active(self, *, command, message, local_outcome):
+        """Bypass the queued worker slot when a streamed or long motion is in flight."""
+        if not self._has_active_grbl_motion_workflow():
+            return False
+        controller = (
+            None
+            if self.grbl_worker is None
+            else getattr(self.grbl_worker, "controller", None)
+        )
+        if controller is None or not controller.is_connected():
+            return False
+        success, command_message, payload = controller.send_realtime_immediate(command)
+        log_lines = list((payload or {}).get("log_lines") or [])
+        if log_lines:
+            self._append_grbl_monitor_lines(log_lines)
+        if not success:
+            print(command_message)
+            self.statusbar.showMessage(command_message)
+            self._set_grbl_monitor_status_text(command_message)
+            return False
+        print(command_message)
+        self.statusbar.showMessage(message)
+        self._set_grbl_monitor_status_text(message)
+        self._apply_local_grbl_realtime_outcome(local_outcome)
+        return True
+
+    def _apply_local_grbl_realtime_outcome(self, outcome):
+        """Mirror the immediate stop effects locally instead of waiting for the worker queue."""
+        outcome = str(outcome or "").strip().lower()
+        if outcome == "hold":
+            if self.raster_scan_active:
+                hold_message = (
+                    "Automatic raster scan aborted because GRBL feed hold was requested."
+                )
+                self.statusbar.showMessage(hold_message)
+                self._set_grbl_monitor_status_text(hold_message)
+                self._finish_raster_scan(
+                    status="paused",
+                    message=hold_message,
+                    unblock_joystick=False,
+                )
+            if self.prepared_raster_controller.has_active_roi_start_motion():
+                hold_message = "Move to the prepared raster start was canceled by GRBL feed hold."
+                self.statusbar.showMessage(hold_message)
+                self._set_grbl_monitor_status_text(hold_message)
+                self._clear_roi_start_motion_state(unblock_joystick=False)
+            if self.grbl_recover_to_fov_requested:
+                hold_message = "Scanner FOV recovery canceled by GRBL feed hold."
+                self.statusbar.showMessage(hold_message)
+                self._set_grbl_monitor_status_text(hold_message)
+                self._clear_scanner_fov_recovery_state(unblock_joystick=False)
+            self.grbl_blocks_joystick_jog = True
+            self._refresh_grbl_status_widgets()
+            return
+
+        self.grbl_machine_limits_armed = False
+        self.grbl_home_reference_position = None
+        self.grbl_capture_home_reference_pending = False
+        self.grbl_machine_state = None
+        self.grbl_machine_position = None
+        self.grbl_work_position = None
+        self.grbl_scanner_position = None
+        self._clear_scanner_fov_recovery_state(unblock_joystick=True)
+        self._clear_roi_start_motion_state(unblock_joystick=True)
+        if self.raster_scan_active:
+            status = "aborted" if outcome == "soft_reset" else "aborted"
+            message = (
+                "Automatic raster scan aborted by GRBL soft reset."
+                if outcome == "soft_reset"
+                else "Automatic raster scan aborted by GRBL emergency stop."
+            )
+            self._finish_raster_scan(
+                status=status,
+                message=message,
+                unblock_joystick=True,
+            )
+        else:
+            self._clear_raster_scan_state(unblock_joystick=True)
+        self._stop_joystick_jog()
+        self._refresh_grbl_status_widgets()
 
     def _on_grbl_home_button_clicked(self):
         self._block_joystick_for_grbl_action()
@@ -2039,6 +2148,9 @@ class MainWindow(QMainWindow):
             machine_position=self.grbl_machine_position,
             home_reference_position=self.grbl_home_reference_position,
         )
+        self._update_grbl_position_labels(self.grbl_scanner_position)
+        self._update_grbl_position_labels(self.grbl_machine_position, prefix="grbl_work_")
+        self._refresh_grbl_status_widgets()
 
     def _handle_grbl_ports_refreshed(self, payload):
         payload = payload or {}
@@ -3088,22 +3200,17 @@ class MainWindow(QMainWindow):
         """Return a conservative lateral transit Z for non-scan positioning moves.
 
         The adaptive raster path computes its own peak-aware safe travel Z from the
-        measured surface model. This helper is only for generic recovery/FOV moves,
-        so keep it simple: use the global GRBL safe Z floor and add a small extra
-        buffer if a recent raster requested a higher probe stand-off.
+        measured surface model. Generic GRBL recovery/FOV moves must not inherit a
+        stale raster stand-off from a previous scan, otherwise "Go to Scanner FOV
+        Home" can rise to surprising Z values even though the saved FOV target is
+        unchanged. Keep these moves pinned to the fixed global safe-Z floor.
         """
-        base = self.grbl_workflow_controller.GRBL_SCANNER_SAFE_Z_MM
-        if self._last_fibre_standoff_mm is None:
-            return base
-        return max(
-            base,
-            float(self._last_fibre_standoff_mm)
-            + float(self.adaptive_raster_controller.DEFAULT_PROBE_SAFETY_MARGIN_MM),
-        )
+        return float(self.grbl_workflow_controller.GRBL_SCANNER_SAFE_Z_MM)
 
     def _clear_prepared_raster_plan(self):
         """Drop the cached raster plan when ROI or calibration inputs change."""
         self.prepared_raster_controller.clear_prepared_plan_state()
+        self._raster_planned_frame = None
 
     def _build_raster_scan_dialog(self, *, force_fixed_z=False, go_to_start_callback=None):
         """Create one raster-settings dialog with the current defaults.
@@ -3187,7 +3294,13 @@ class MainWindow(QMainWindow):
                 self._raster_planned_frame = np.asarray(self.camera_worker.frame_color).copy()
             self.lock_roi()
             try:
-                scan_plan, execution = self._build_raster_scan_plan_and_execution(settings)
+                surface_model_override = None
+                if str(settings.get("scan_mode")) == "surface_following":
+                    surface_model_override = self._build_robust_surface_model_for_raster()
+                scan_plan, execution = self._build_raster_scan_plan_and_execution(
+                    settings,
+                    surface_model_override=surface_model_override,
+                )
             except RasterScanError as exc:
                 message = f"Could not plan go-to-start move: {exc}"
                 print(message)
@@ -3223,10 +3336,39 @@ class MainWindow(QMainWindow):
 
         action = dialog.selection or RasterScanDialog.ACTION_START_RASTER
 
+        # ── CRITICAL: Do NOT rebuild the surface model here if the user already
+        # clicked "Go to ROI Start" inside this dialog.
+        #
+        # The Go-to-Start callback (_go_to_start_callback) built the surface model
+        # while the camera was still at FOV-home — the only position where the
+        # camera's view is consistent with the XY homography calibration.  After
+        # that click the scanner moved away from FOV-home (raise to safe Z, then XY
+        # travel to the scan start).  Rebuilding the surface model NOW would use a
+        # live depth frame from the scan-start camera position, which is geometrically
+        # unrelated to the calibrated homography and produces completely wrong height
+        # values (tissue appears 5–7 mm shorter than it is → probe crashes into tissue).
+        #
+        # The Go-to-Start callback already stored the correct plan via
+        # set_prepared_plan_state().  Reuse it here instead of overwriting it.
+        if action == RasterScanDialog.ACTION_START_RASTER:
+            existing_plan = self._get_prepared_raster_plan_if_valid()
+            if existing_plan is not None:
+                return existing_plan, action
+
+        # No valid cached plan (user clicked "Start Raster" directly without first
+        # clicking "Go to ROI Start").  The scanner has not yet moved, so the camera
+        # is still at FOV-home and it is safe to build the surface model from the
+        # live depth frame.
         settings = dialog.build_settings()
         self.lock_roi()
         try:
-            scan_plan, execution = self._build_raster_scan_plan_and_execution(settings)
+            surface_model_override = None
+            if str(settings.get("scan_mode")) == "surface_following":
+                surface_model_override = self._build_robust_surface_model_for_raster()
+            scan_plan, execution = self._build_raster_scan_plan_and_execution(
+                settings,
+                surface_model_override=surface_model_override,
+            )
         except RasterScanError as exc:
             message = f"Automatic raster scan failed to plan: {exc}"
             print(message)
@@ -3266,7 +3408,7 @@ class MainWindow(QMainWindow):
         depth_scale = float(getattr(self.camera_worker, "depth_scale_mm", 1.0))
         return np.asarray(frame_depth, dtype="float32") * depth_scale
 
-    def _build_raster_scan_plan_and_execution(self, settings):
+    def _build_raster_scan_plan_and_execution(self, settings, *, surface_model_override=None):
         roi_box = getattr(self.camera_worker, "roi_box", None) if self.camera_worker is not None else None
         if roi_box is None:
             raise RasterScanError("Select an ROI before planning the raster scan.")
@@ -3283,13 +3425,16 @@ class MainWindow(QMainWindow):
 
         try:
             surface_model = (
-                self._try_build_surface_model_for_raster()
-                if (
-                    self.RASTER_SCAN_SURFACE_FOLLOWING_ENABLED
-                    and str(settings.get("scan_mode")) == "surface_following"
-                )
-                else None
+                surface_model_override
+                if surface_model_override is not None
+                else self._try_build_surface_model_for_raster()
             )
+            if (
+                surface_model is None
+                and self.RASTER_SCAN_SURFACE_FOLLOWING_ENABLED
+                and str(settings.get("scan_mode")) == "surface_following"
+            ):
+                surface_model = self._build_robust_surface_model_for_raster()
             if self.RASTER_SCAN_SURFACE_FOLLOWING_ENABLED and str(settings.get("scan_mode")) == "surface_following":
                 if surface_model is None:
                     raise RasterScanError(
@@ -3325,7 +3470,10 @@ class MainWindow(QMainWindow):
             raise
         except Exception as exc:
             raise RasterScanError(str(exc)) from exc
-        estimated_peak_height_mm = self._estimate_current_roi_peak_height_mm()
+        if str(scan_plan.get("scan_mode")) == "surface_following" and surface_model is not None:
+            estimated_peak_height_mm = float(surface_model.get("peak_height_mm", 0.0))
+        else:
+            estimated_peak_height_mm = self._estimate_current_roi_peak_height_mm()
         resolved_safe_travel_z_mm = self.raster_scan_controller.resolve_safe_travel_z_mm(
             calibration_payload=calibration_payload,
             global_min_safe_z_mm=settings["safe_travel_z_mm"],
@@ -3468,6 +3616,40 @@ class MainWindow(QMainWindow):
         return self.surface_model_controller.build_surface_model(
             frame_depth=self.camera_worker.frame_depth,
             depth_scale_mm=getattr(self.camera_worker, "depth_scale_mm", 1.0),
+            intrinsics=intrinsics,
+            roi_box=roi_box,
+            scan_calibration=calibration,
+        )
+
+    def _build_robust_surface_model_for_raster(self):
+        """Aggregate a short depth burst before one adaptive raster to avoid underestimating peaks."""
+        if self.camera_worker is None or self.camera_worker.frame_depth is None:
+            return None
+        roi_box = getattr(self.camera_worker, "roi_box", None)
+        if roi_box is None:
+            return None
+        calibration = self._get_active_scan_calibration_payload()
+        if calibration is None:
+            return None
+        intrinsics = self.camera_worker.get_aligned_depth_intrinsics()
+        if intrinsics is None:
+            return None
+
+        snapshots = self._collect_snapshots(
+            sample_count=self.RASTER_SURFACE_MODEL_SAMPLE_COUNT,
+            require_depth=True,
+            label="Collecting depth frames for surface-following raster",
+        )
+        depth_stack = np.stack(
+            [snapshot["frame_depth"] for snapshot in snapshots],
+            axis=0,
+        ).astype("float32")
+        robust_depth_frame_mm, _aggregation_summary = build_robust_depth_frame_mm(
+            depth_stack * float(getattr(self.camera_worker, "depth_scale_mm", 1.0))
+        )
+        return self.surface_model_controller.build_surface_model(
+            frame_depth=robust_depth_frame_mm,
+            depth_scale_mm=1.0,
             intrinsics=intrinsics,
             roi_box=roi_box,
             scan_calibration=calibration,
@@ -4263,9 +4445,12 @@ class MainWindow(QMainWindow):
         self.raster_scan_active_line_index = None
         self.raster_scan_run_state = None
         self.raster_scan_started_at_monotonic = None
+        self.raster_scan_dialog = None
+        self._clear_prepared_raster_plan()
         if unblock_joystick:
             self.grbl_blocks_joystick_jog = False
         self._sync_grbl_monitor_polling()
+        self._refresh_grbl_status_widgets()
 
     def _flush_streaming_position_log(self, position_log):
         """Write the position snapshot list collected in the GRBLWorker thread to the motion log.

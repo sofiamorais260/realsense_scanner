@@ -81,7 +81,7 @@ class AdaptiveRasterController:
         )
 
         adaptive_lines = []
-        max_surface_height_mm = 0.0
+        max_surface_height_mm = None
         min_target_machine_z_mm = None
         max_target_machine_z_mm = None
         min_target_clearance_mm = None
@@ -266,7 +266,10 @@ class AdaptiveRasterController:
                 z_band_step_mm=float(z_band_step_mm),
                 z_change_hysteresis_mm=float(z_change_hysteresis_mm),
             )
-            max_surface_height_mm = max(max_surface_height_mm, float(np.max(smoothed_heights_mm)))
+            max_surface_height_mm = self._max_or_value(
+                max_surface_height_mm,
+                float(np.max(peak_safe_heights_mm)),
+            )
 
             segments = []
             start_segment_index = 0
@@ -379,7 +382,11 @@ class AdaptiveRasterController:
             "median_height_mm": float(surface_model["median_height_mm"]),
             "mean_height_mm": float(surface_model["mean_height_mm"]),
         }
-        scan_plan["max_surface_height_mm"] = float(max_surface_height_mm)
+        scan_plan["max_surface_height_mm"] = float(
+            surface_model.get("peak_height_mm", 0.0)
+            if max_surface_height_mm is None
+            else max_surface_height_mm
+        )
         if min_target_machine_z_mm is None:
             min_target_machine_z_mm = tray_surface_machine_z_mm
         if max_target_machine_z_mm is None:

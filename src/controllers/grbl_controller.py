@@ -242,6 +242,44 @@ class GRBLController:
         """Abort GRBL immediately using the realtime soft-reset control character."""
         return self.send_command("\x18", realtime=True, read_response=True)
 
+    def send_realtime_immediate(self, command) -> tuple[bool, str, PayloadDict]:
+        """Write one realtime GRBL byte immediately without waiting for worker-thread turn.
+
+        This is used for hard-stop style commands while a long-running streamed job
+        is occupying the GRBL worker thread. The caller is responsible for any
+        follow-up state handling because no synchronous response is read here.
+        """
+        if self.connection is None:
+            return False, "GRBL is not connected.", {"lines": []}
+
+        if isinstance(command, (bytes, bytearray)):
+            payload = bytes(command)
+        else:
+            payload = str(command or "").encode("utf-8", errors="replace")
+        if not payload:
+            return False, "GRBL realtime command is empty.", {"lines": []}
+
+        command_text = (
+            f"0x{payload[0]:02X}"
+            if len(payload) == 1 and not self._is_printable_ascii_byte(payload[0])
+            else payload.decode("utf-8", errors="replace")
+        )
+        try:
+            self.connection.write(payload)
+            if hasattr(self.connection, "flush"):
+                self.connection.flush()
+            return True, f"GRBL realtime command `{command_text}` sent immediately.", {
+                "lines": [],
+                "log_lines": [f"TX: {command_text}"],
+                "sent_command": command_text,
+            }
+        except Exception as exc:
+            return False, f"GRBL realtime command `{command_text}` failed: {exc}", {
+                "lines": [],
+                "log_lines": [f"TX: {command_text}", f"ERROR: {exc}"],
+                "sent_command": command_text,
+            }
+
     def home(self) -> tuple[bool, str, PayloadDict]:
         """Run the GRBL homing cycle.
 
@@ -476,9 +514,10 @@ class GRBLController:
                 if pending_lengths:
                     raw = self.connection.readline()
                     response = raw.decode("utf-8", errors="replace").strip()
+                    response_lower = response.lower()
                     if response.startswith("ok"):
                         bytes_in_flight -= pending_lengths.pop(0)
-                    elif response.startswith("error"):
+                    elif response_lower.startswith("error"):
                         error_message = f"GRBL error during streaming: {response}"
                         break
                     elif response.startswith("<"):
@@ -489,6 +528,26 @@ class GRBLController:
                                 status_callback(response)
                             except Exception:
                                 pass
+                        machine_state = str(
+                            self.parse_status_line(response).get("machine_state") or ""
+                        ).strip()
+                        machine_state_lower = machine_state.lower()
+                        if machine_state_lower.startswith("hold"):
+                            error_message = (
+                                f"G-code stream interrupted because GRBL entered {machine_state}."
+                            )
+                            break
+                        if machine_state_lower.startswith("alarm"):
+                            error_message = (
+                                f"G-code stream interrupted because GRBL entered {machine_state}."
+                            )
+                            break
+                    elif response_lower.startswith("alarm:"):
+                        error_message = f"GRBL alarm during streaming: {response}"
+                        break
+                    elif response_lower.startswith("grbl "):
+                        error_message = "G-code stream interrupted by GRBL reset."
+                        break
 
             if error_message:
                 end_unix_s = time.time()
@@ -505,17 +564,36 @@ class GRBLController:
                     self.connection.flush()
                 raw = self.connection.readline()
                 status = raw.decode("utf-8", errors="replace").strip()
+                status_lower = status.lower()
                 if status_callback is not None:
                     try:
                         status_callback(status)
                     except Exception:
                         pass
-                if "<Idle" in status:
+                if status_lower.startswith("<idle"):
                     end_unix_s = time.time()
                     return True, "G-code stream completed.", {
                         "start_unix_s": start_unix_s,
                         "end_unix_s": end_unix_s,
                         "lines_sent": len(lines),
+                    }
+                if status_lower.startswith("<hold"):
+                    end_unix_s = time.time()
+                    return False, f"G-code stream interrupted because GRBL entered {status}.", {
+                        "start_unix_s": start_unix_s,
+                        "end_unix_s": end_unix_s,
+                    }
+                if status_lower.startswith("<alarm") or status_lower.startswith("alarm:"):
+                    end_unix_s = time.time()
+                    return False, f"G-code stream interrupted because GRBL entered {status}.", {
+                        "start_unix_s": start_unix_s,
+                        "end_unix_s": end_unix_s,
+                    }
+                if status_lower.startswith("grbl "):
+                    end_unix_s = time.time()
+                    return False, "G-code stream interrupted by GRBL reset.", {
+                        "start_unix_s": start_unix_s,
+                        "end_unix_s": end_unix_s,
                     }
                 self.sleep_fn(float(idle_poll_interval_s))
 
