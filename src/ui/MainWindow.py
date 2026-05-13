@@ -3289,9 +3289,18 @@ class MainWindow(QMainWindow):
         """
         def _go_to_start_callback(settings):
             """Build a plan from the current dialog settings and begin the transit move."""
-            # Snapshot frame at the exact moment the button is pressed.
-            if self._raster_planned_frame is None and self.camera_worker is not None                     and self.camera_worker.frame_color is not None:
-                self._raster_planned_frame = np.asarray(self.camera_worker.frame_color).copy()
+            # Snapshot frames at the exact moment the button is pressed.
+            # The camera is still at FOV-home here — this is the ONLY moment the
+            # live depth frame is geometrically consistent with the XY homography
+            # calibration.  Save it now so _start_raster_scan_artifacts can use
+            # it as depth_map.npy rather than the post-movement live frame.
+            if self.camera_worker is not None:
+                if self._raster_planned_frame is None and self.camera_worker.frame_color is not None:
+                    self._raster_planned_frame = np.asarray(self.camera_worker.frame_color).copy()
+                if self.camera_worker.frame_depth is not None:
+                    self._raster_fov_home_depth_frame = np.asarray(
+                        self.camera_worker.frame_depth
+                    ).copy()
             self.lock_roi()
             try:
                 surface_model_override = None
@@ -3329,7 +3338,8 @@ class MainWindow(QMainWindow):
             go_to_start_callback=_go_to_start_callback,
         )
         self.raster_scan_dialog = dialog
-        self._raster_planned_frame = None  # reset; set when first button is pressed
+        self._raster_planned_frame = None       # reset; set when first button is pressed
+        self._raster_fov_home_depth_frame = None  # reset; set in _go_to_start_callback
         if dialog.exec_() != QDialog.Accepted:
             self.statusbar.showMessage("Automatic raster scan canceled.")
             return None, None
@@ -3753,7 +3763,15 @@ class MainWindow(QMainWindow):
         # the height array (.npy) and a colour-mapped figure (.png) with a mm
         # scale bar.  Without calibration we fall back to a raw depth preview so
         # the file is always present.
-        frame_depth_raw = getattr(self.camera_worker, "frame_depth", None)
+        # Prefer the depth frame captured at FOV-home (during _go_to_start_callback)
+        # over the current live frame.  The camera is mounted on the carriage: once
+        # the scanner has moved to the scan-start position the live frame no longer
+        # corresponds to the calibrated XY homography, so the reconstruction XY map
+        # would be spatially offset.  The FOV-home frame (saved before any movement)
+        # is the geometrically correct reference for the entire scan.
+        frame_depth_raw = getattr(self, "_raster_fov_home_depth_frame", None)
+        if frame_depth_raw is None:
+            frame_depth_raw = getattr(self.camera_worker, "frame_depth", None)
         if frame_depth_raw is not None:
             try:
                 import matplotlib
