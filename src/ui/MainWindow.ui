@@ -2900,7 +2900,7 @@ Temporal - alpha: 40
         <widget class="Line" name="auto_raster_line">
          <property name="geometry">
           <rect>
-           <x>200</x>
+           <x>380</x>
            <y>10</y>
            <width>16</width>
            <height>151</height>
@@ -2908,6 +2908,19 @@ Temporal - alpha: 40
          </property>
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+        <widget class="QCheckBox" name="rgb_reconstruction_checkBox">
+         <property name="geometry">
+          <rect>
+           <x>130</x>
+           <y>10</y>
+           <width>171</width>
+           <height>20</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>RGB 3D Reconstruction</string>
          </property>
         </widget>
        </widget>

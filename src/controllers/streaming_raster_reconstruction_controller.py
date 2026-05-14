@@ -141,6 +141,19 @@ class StreamingRasterReconstructionController:
         valid      = np.asarray(topo["valid_mask"],    dtype=bool)
         roi_h, roi_w = height_map.shape
 
+        # Load the optional camera colour frame (only present when the user
+        # ticked "RGB reconstruction" before scanning).  Crop it to the ROI
+        # so it aligns pixel-for-pixel with height_map / valid.
+        color_npy_path = run_dir / "color_map.npy"
+        color_roi_bgr = None
+        if color_npy_path.exists():
+            try:
+                color_full = np.load(str(color_npy_path))   # (H, W, 3) uint8 BGR
+                rx, ry = int(roi_box[0]), int(roi_box[1])
+                color_roi_bgr = color_full[ry:ry + roi_h, rx:rx + roi_w]
+            except Exception as exc:
+                print(f"[streaming reconstruction] Could not load color_map.npy: {exc}")
+
         # ── 2. Build trigger index map ────────────────────────────────────────
         # Prefer timestamp-based matching (actual scanner position at each FLIM
         # trigger time) when timestamps are supplied and the motion log exists.
@@ -188,7 +201,7 @@ class StreamingRasterReconstructionController:
         )
 
         ply_path = recon_dir / "surface_pointcloud.ply"
-        self._write_ply(ply_path, x_map, y_map, height_map, valid)
+        self._write_ply(ply_path, x_map, y_map, height_map, valid, color_roi_bgr=color_roi_bgr)
 
         topo_path = recon_dir / "surface_topography.png"
         self._render_topography_with_scanpath(
@@ -521,18 +534,24 @@ class StreamingRasterReconstructionController:
         plt.close(fig)
 
     @staticmethod
-    def _write_ply(path, x_map, y_map, height_map, valid):
+    def _write_ply(path, x_map, y_map, height_map, valid, color_roi_bgr=None):
         mask = valid & np.isfinite(height_map)
         xs = x_map[mask].astype("float32")
         ys = y_map[mask].astype("float32")
         zs = height_map[mask].astype("float32")
 
-        if zs.size > 0:
-            z_norm = (zs - zs.min()) / max(float(zs.max() - zs.min()), 1e-6)
+        if color_roi_bgr is not None:
+            # Real camera colours: crop already aligned to ROI, just select
+            # valid pixels and convert BGR → RGB.
+            rgb = color_roi_bgr[mask][:, ::-1].astype("uint8")
         else:
-            z_norm = zs
-        cmap = plt.get_cmap("turbo")
-        rgb = (cmap(z_norm)[:, :3] * 255).astype("uint8")
+            # Fall back to height-mapped turbo colormap.
+            if zs.size > 0:
+                z_norm = (zs - zs.min()) / max(float(zs.max() - zs.min()), 1e-6)
+            else:
+                z_norm = zs
+            cmap = plt.get_cmap("turbo")
+            rgb = (cmap(z_norm)[:, :3] * 255).astype("uint8")
 
         n_pts = int(xs.size)
         header = (

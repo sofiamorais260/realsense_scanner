@@ -3788,6 +3788,25 @@ class MainWindow(QMainWindow):
                 artifact_update = {"depth_map_npy": str(depth_npy_path)}
                 run_state["depth_map_npy_path"] = str(depth_npy_path)
 
+                # Save colour frame for RGB point-cloud reconstruction.
+                # Only written when the user has ticked rgb_reconstruction_checkBox.
+                # The pre-scan colour frame is used (same moment as depth_map.npy)
+                # so depth and colour are spatially registered to the calibration.
+                _save_rgb = (
+                    getattr(self, "rgb_reconstruction_checkBox", None) is not None
+                    and self.rgb_reconstruction_checkBox.isChecked()
+                )
+                if _save_rgb:
+                    _frame_color = getattr(self, "_raster_planned_frame", None)
+                    if _frame_color is None:
+                        _frame_color = getattr(self.camera_worker, "frame_color", None)
+                    if _frame_color is not None:
+                        color_array = np.asarray(_frame_color, dtype="uint8")
+                        color_npy_path = run_dir / "color_map.npy"
+                        np.save(str(color_npy_path), color_array)
+                        artifact_update["color_map_npy"] = str(color_npy_path)
+                        run_state["color_map_npy_path"] = str(color_npy_path)
+
                 # ── Calibrated topography map (preferred) ─────────────────────
                 _topo_saved = False
                 _topo_calib = self._get_active_scan_calibration_payload()
