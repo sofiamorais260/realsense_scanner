@@ -47,6 +47,17 @@ class RasterReconstructionController:
         sample_capture = dict(metadata.get("sample_capture") or {})
         sample_entries = list(sample_capture.get("samples") or [])
         if not sample_entries:
+            # Streaming-mode runs complete reconstruction in real time during the
+            # scan and intentionally strip sample_capture from the metadata
+            # afterwards.  The results are already in the reconstruction/ folder.
+            reconstruction_dir = run_dir / "reconstruction"
+            streaming_result = reconstruction_dir / "surface_topography.png"
+            if streaming_result.exists():
+                raise RasterReconstructionError(
+                    "This run used streaming reconstruction — the results are already "
+                    f"saved in {reconstruction_dir}. "
+                    "Post-scan reconstruction is only available for step-based (non-streaming) runs."
+                )
             raise RasterReconstructionError(
                 "This raster run does not contain saved scan samples. Run the raster scan again first."
             )

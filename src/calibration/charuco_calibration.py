@@ -773,9 +773,12 @@ def build_robust_depth_frame_mm(
         raise CalibrationError("The depth stack does not contain any valid samples.")
 
     nan_depth_stack_mm = np.where(valid_stack, depth_stack_mm, np.nan).astype("float32")
-    median_depth_mm = np.nanmedian(nan_depth_stack_mm, axis=0).astype("float32")
-    abs_dev_mm = np.abs(nan_depth_stack_mm - median_depth_mm[None, :, :]).astype("float32")
-    mad_mm = np.nanmedian(abs_dev_mm, axis=0).astype("float32")
+    import warnings as _warnings
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore", RuntimeWarning)
+        median_depth_mm = np.nanmedian(nan_depth_stack_mm, axis=0).astype("float32")
+        abs_dev_mm = np.abs(nan_depth_stack_mm - median_depth_mm[None, :, :]).astype("float32")
+        mad_mm = np.nanmedian(abs_dev_mm, axis=0).astype("float32")
     robust_sigma_mm = 1.4826 * mad_mm
     rejection_threshold_mm = np.maximum(
         float(min_threshold_mm),
@@ -794,10 +797,13 @@ def build_robust_depth_frame_mm(
         inlier_stack[:, fallback_pixel_mask] = valid_stack[:, fallback_pixel_mask]
         inlier_count = np.sum(inlier_stack, axis=0).astype("int32")
 
-    aggregated_depth_mm = np.nanmedian(
-        np.where(inlier_stack, nan_depth_stack_mm, np.nan),
-        axis=0,
-    ).astype("float32")
+    import warnings as _warnings
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore", RuntimeWarning)
+        aggregated_depth_mm = np.nanmedian(
+            np.where(inlier_stack, nan_depth_stack_mm, np.nan),
+            axis=0,
+        ).astype("float32")
     aggregated_depth_mm = np.where(np.isfinite(aggregated_depth_mm), aggregated_depth_mm, 0.0).astype(
         "float32"
     )

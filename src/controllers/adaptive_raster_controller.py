@@ -74,8 +74,19 @@ class AdaptiveRasterController:
         carriage_above_fiber_mm = max(0.0, float(carriage_above_fiber_mm))
         carriage_left_extent_mm = max(0.0, float(carriage_left_extent_mm))
         tray_surface_machine_z_mm = float(calibration_payload["tray_surface_machine_z_mm"])
+        # Use p95 of the surface height (not the raw max) as the global peak
+        # estimate.  np.max can be dominated by a handful of stray pixels at
+        # the ROI boundary (specular glints, depth noise at edges) that spike
+        # far above the actual tissue surface.  p95 drops the noisiest 5% of
+        # pixels while still being a conservative ceiling for real tissue.
+        _p95_height_mm = float(surface_model.get("p95_height_mm", 0.0))
+        _raw_peak_mm = float(surface_model.get("peak_height_mm", 0.0))
+        _robust_peak_mm = _p95_height_mm if _p95_height_mm > 0.0 else _raw_peak_mm
+        # Floor at 0: a fully concave or all-below-plane surface should not
+        # produce a negative global probe target.
+        _robust_peak_mm = max(0.0, _robust_peak_mm)
         global_peak_probe_target_mm = (
-            float(surface_model.get("peak_height_mm", 0.0))
+            _robust_peak_mm
             + float(standoff_mm)
             + float(probe_safety_margin_mm)
         )
