@@ -194,8 +194,8 @@ class TopographyTools:
         im = ax.imshow(
             z_plot,
             cmap=cmap,
-            origin="lower",
-            extent=(x_min_mm, x_max_mm, y_min_mm, y_max_mm),
+            origin="upper",
+            extent=(x_min_mm, x_max_mm, y_max_mm, y_min_mm),
             vmin=plot_vmin,
             vmax=plot_vmax,
             interpolation="none",

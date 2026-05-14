@@ -394,13 +394,13 @@ class RasterReconstructionViewerDialog(QDialog):
         extent = (
             float(np.min(x_valid)),
             float(np.max(x_valid)),
-            float(np.min(y_valid)),
             float(np.max(y_valid)),
+            float(np.min(y_valid)),
         )
         heatmap = np.ma.masked_invalid(np.where(self._valid_mask, self._height_map_mm, np.nan))
         image = self.heatmap_ax.imshow(
             heatmap,
-            origin="lower",
+            origin="upper",
             extent=extent,
             interpolation="none",
             cmap="viridis",

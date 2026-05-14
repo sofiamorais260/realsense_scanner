@@ -148,8 +148,12 @@ class PreviewController:
         }
 
     @staticmethod
-    def _zoom_frame_to_roi(frame, *, camera_worker, interpolation=cv2.INTER_NEAREST):
-        """Zoom a preview frame into the current ROI while keeping the window size stable."""
+    def _zoom_frame_to_roi(frame, *, camera_worker, interpolation=cv2.INTER_NEAREST, display_scale=3):
+        """Crop the depth preview to the locked ROI and scale it up for readability.
+
+        The ROI aspect ratio is always preserved. ``display_scale`` controls how
+        many times larger the displayed window is relative to the raw ROI pixels.
+        """
         if frame is None or camera_worker is None:
             return frame
 
@@ -162,11 +166,9 @@ class PreviewController:
         if roi_frame.size == 0:
             return frame
 
-        return cv2.resize(
-            roi_frame,
-            (frame.shape[1], frame.shape[0]),
-            interpolation=interpolation,
-        )
+        display_w = max(1, int(w * display_scale))
+        display_h = max(1, int(h * display_scale))
+        return cv2.resize(roi_frame, (display_w, display_h), interpolation=interpolation)
 
     def _make_depth_preview(self, frame_depth, *, camera_worker, min_max_mm, colorized):
         """Build a readable raw or grayscale depth preview and append a simple legend."""
