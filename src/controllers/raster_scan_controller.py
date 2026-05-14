@@ -34,7 +34,7 @@ class RasterScanController:
         "tray_surface_machine_z_mm",
     )
     DEFAULT_LINE_SPACING_MM = 1.0
-    DEFAULT_EDGE_MARGIN_MM = 0.0
+    DEFAULT_EDGE_MARGIN_MM = 2.0
     DEFAULT_SCAN_FEEDRATE_MM_PER_MIN = 800.0
     DEFAULT_TRAVEL_FEEDRATE_MM_PER_MIN = 800.0
     DEFAULT_TARGET_SAFE_Z_MM = 3.0

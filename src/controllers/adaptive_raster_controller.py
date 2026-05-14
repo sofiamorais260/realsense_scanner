@@ -16,7 +16,7 @@ class AdaptiveRasterController:
     DEFAULT_SEGMENT_LENGTH_MM = 3.0
     MIN_SEGMENT_LENGTH_MM = 1.0
     DEFAULT_TRAVEL_CLEARANCE_MM = 15.0
-    DEFAULT_PROBE_SAFETY_MARGIN_MM = 1.5
+    DEFAULT_PROBE_SAFETY_MARGIN_MM = 2.5
     # Clearance added above max(current-row-end-Z, next-row-start-Z) for the
     # per-row inter-row transit.  Much smaller than DEFAULT_TRAVEL_CLEARANCE_MM
     # because we are transitioning between known adjacent scan heights, not from
