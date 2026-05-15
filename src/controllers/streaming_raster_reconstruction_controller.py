@@ -230,6 +230,23 @@ class StreamingRasterReconstructionController:
                     colormap=flim_colormap,
                 )
 
+        viewer_path = recon_dir / "interactive_viewer.html"
+        try:
+            self._write_interactive_viewer(
+                path=viewer_path,
+                x_map=x_map,
+                y_map=y_map,
+                height_map=height_map,
+                valid=valid,
+                trigger_index_map=trigger_index_map,
+                flim_values=np.asarray(flim_values, dtype="float32") if flim_values is not None else None,
+                flim_label=flim_label,
+                color_roi_bgr=color_roi_bgr,
+            )
+        except Exception as exc:
+            print(f"[streaming reconstruction] Interactive viewer generation failed: {exc}")
+            viewer_path = None
+
         assigned_px = int(np.sum(trigger_index_map >= 0))
         total_valid_px = int(np.sum(valid))
         h_vals = height_map[valid & np.isfinite(height_map)]
@@ -249,6 +266,7 @@ class StreamingRasterReconstructionController:
                 "surface_pointcloud_ply": str(ply_path),
                 "surface_topography_png": str(topo_path),
                 "flim_overlay_png": str(flim_path) if flim_path else None,
+                "interactive_viewer_html": str(viewer_path) if viewer_path else None,
             },
         }
         meta_path = recon_dir / "reconstruction_metadata.json"
@@ -260,8 +278,200 @@ class StreamingRasterReconstructionController:
             "surface_pointcloud_ply": str(ply_path),
             "surface_topography_png": str(topo_path),
             "flim_overlay_png": str(flim_path) if flim_path else None,
+            "interactive_viewer_html": str(viewer_path) if viewer_path else None,
             "reconstruction_metadata": recon_meta,
         }
+
+    @staticmethod
+    def _write_interactive_viewer(
+        *, path, x_map, y_map, height_map, valid,
+        trigger_index_map, flim_values=None, flim_label="FLIM value",
+        color_roi_bgr=None,
+    ):
+        """Generate a self-contained interactive HTML viewer with multiple view layers.
+
+        Buttons switch between: Tissue Texture | Height Map | Point Cloud | FLIM Map.
+        Hovering any point shows X, Y, Z (mm) + trigger index + FLIM value.
+        """
+        import plotly.graph_objects as go
+        from plotly.io import to_html
+
+        roi_h, roi_w = height_map.shape
+        mask = valid & np.isfinite(height_map)
+
+        xs = x_map[mask].astype("float32")
+        ys = y_map[mask].astype("float32")
+        zs = height_map[mask].astype("float32")
+        n_pts = int(xs.size)
+
+        # Per-vertex trigger index
+        trig_vals = trigger_index_map[mask].astype(np.int32)
+
+        # Per-vertex FLIM value
+        has_flim = flim_values is not None and len(flim_values) > 0
+        if has_flim:
+            flim_arr = np.asarray(flim_values, dtype="float32")
+            flim_per_vertex = np.where(
+                (trig_vals >= 0) & (trig_vals < len(flim_arr)),
+                flim_arr[np.clip(trig_vals, 0, len(flim_arr) - 1)],
+                np.nan,
+            )
+        else:
+            flim_per_vertex = np.full(n_pts, np.nan, dtype="float32")
+
+        # Build triangulated faces
+        vertex_index = np.full((roi_h, roi_w), -1, dtype=np.int32)
+        vertex_index[mask] = np.arange(n_pts, dtype=np.int32)
+        ii, jj = np.meshgrid(
+            np.arange(roi_h - 1, dtype=np.int32),
+            np.arange(roi_w - 1, dtype=np.int32),
+            indexing="ij",
+        )
+        v00 = vertex_index[ii,     jj    ]
+        v10 = vertex_index[ii + 1, jj    ]
+        v01 = vertex_index[ii,     jj + 1]
+        v11 = vertex_index[ii + 1, jj + 1]
+        tri1_ok = (v00 >= 0) & (v10 >= 0) & (v01 >= 0)
+        tri2_ok = (v10 >= 0) & (v11 >= 0) & (v01 >= 0)
+        faces = np.concatenate([
+            np.stack([v00[tri1_ok], v10[tri1_ok], v01[tri1_ok]], axis=1),
+            np.stack([v10[tri2_ok], v11[tri2_ok], v01[tri2_ok]], axis=1),
+        ], axis=0).astype(np.int32)
+
+        fi = faces[:, 0].tolist()
+        fj = faces[:, 1].tolist()
+        fk = faces[:, 2].tolist()
+
+        # Hover text
+        flim_text = [
+            f"{flim_per_vertex[i]:.4f}" if np.isfinite(flim_per_vertex[i]) else "N/A"
+            for i in range(n_pts)
+        ]
+        trig_text = [str(int(t)) if t >= 0 else "unassigned" for t in trig_vals]
+        hover = [
+            f"X: {xs[i]:.2f} mm<br>Y: {ys[i]:.2f} mm<br>Z: {zs[i]:.2f} mm<br>"
+            f"Trigger: {trig_text[i]}<br>{flim_label}: {flim_text[i]}"
+            for i in range(n_pts)
+        ]
+
+        mesh_common = dict(
+            x=xs.tolist(), y=ys.tolist(), z=zs.tolist(),
+            i=fi, j=fj, k=fk,
+            text=hover, hoverinfo="text",
+            hoverlabel=dict(bgcolor="white", font=dict(size=13)),
+            lighting=dict(ambient=0.6, diffuse=0.8, specular=0.1),
+            lightposition=dict(x=1, y=1, z=1),
+        )
+
+        # ── Trace 0: Tissue texture (camera RGB or height fallback) ───────────
+        if color_roi_bgr is not None:
+            rgb = color_roi_bgr[mask][:, ::-1].astype("uint8")
+            vertex_colors = [
+                f"rgb({int(rgb[i,0])},{int(rgb[i,1])},{int(rgb[i,2])})"
+                for i in range(n_pts)
+            ]
+            trace_texture = go.Mesh3d(
+                **mesh_common,
+                vertexcolor=vertex_colors,
+                visible=True, name="Tissue texture", showscale=False,
+            )
+        else:
+            z_norm = (zs - zs.min()) / max(float(zs.max() - zs.min()), 1e-6)
+            trace_texture = go.Mesh3d(
+                **mesh_common,
+                intensity=z_norm.tolist(), colorscale="Turbo",
+                colorbar=dict(title="Height (mm)", thickness=15, x=1.02),
+                visible=True, name="Tissue texture (height)",
+            )
+
+        # ── Trace 1: Height map ───────────────────────────────────────────────
+        trace_height = go.Mesh3d(
+            **mesh_common,
+            intensity=zs.tolist(), colorscale="Turbo",
+            colorbar=dict(title="Height (mm)", thickness=15, x=1.02),
+            visible=False, name="Height map",
+        )
+
+        # ── Trace 2: Point cloud ──────────────────────────────────────────────
+        if color_roi_bgr is not None:
+            rgb = color_roi_bgr[mask][:, ::-1].astype("uint8")
+            pt_colors = [f"rgb({int(rgb[i,0])},{int(rgb[i,1])},{int(rgb[i,2])})" for i in range(n_pts)]
+            marker_dict = dict(size=2, color=pt_colors)
+        else:
+            marker_dict = dict(size=2, color=zs.tolist(), colorscale="Turbo", showscale=True,
+                               colorbar=dict(title="Height (mm)", thickness=15, x=1.02))
+
+        trace_pointcloud = go.Scatter3d(
+            x=xs.tolist(), y=ys.tolist(), z=zs.tolist(),
+            mode="markers", marker=marker_dict,
+            text=hover, hoverinfo="text",
+            hoverlabel=dict(bgcolor="white", font=dict(size=13)),
+            visible=False, name="Point cloud",
+        )
+
+        # ── Trace 3: FLIM map ─────────────────────────────────────────────────
+        if has_flim:
+            flim_intensity = np.where(np.isfinite(flim_per_vertex), flim_per_vertex, 0.0)
+            trace_flim = go.Mesh3d(
+                **mesh_common,
+                intensity=flim_intensity.tolist(), colorscale="Plasma",
+                colorbar=dict(title=flim_label, thickness=15, x=1.02),
+                visible=False, name="FLIM map",
+            )
+            flim_label_btn = "FLIM Map"
+        else:
+            trace_flim = go.Mesh3d(
+                **mesh_common,
+                intensity=[0.0] * n_pts, colorscale="Plasma", opacity=0.0,
+                colorbar=dict(title=flim_label, thickness=15, x=1.02),
+                visible=False, name="FLIM map (no data)",
+            )
+            flim_label_btn = "FLIM Map (no data yet)"
+
+        # visibility lists: [texture, height, pointcloud, flim]
+        fig = go.Figure(data=[trace_texture, trace_height, trace_pointcloud, trace_flim])
+        fig.update_layout(
+            title=dict(text="3D Surface Reconstruction", font=dict(size=16)),
+            scene=dict(
+                xaxis_title="X (mm)", yaxis_title="Y (mm)", zaxis_title="Height (mm)",
+                aspectmode="data",
+                bgcolor="rgb(20,20,30)",
+                xaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+                zaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+            ),
+            paper_bgcolor="rgb(30,30,40)",
+            font=dict(color="white"),
+            margin=dict(l=0, r=80, t=70, b=0),
+            updatemenus=[dict(
+                type="buttons",
+                direction="left",
+                x=0.01, y=1.12,
+                xanchor="left",
+                buttons=[
+                    dict(label="Tissue Texture", method="update",
+                         args=[{"visible": [True,  False, False, False]}]),
+                    dict(label="Height Map",     method="update",
+                         args=[{"visible": [False, True,  False, False]}]),
+                    dict(label="Point Cloud",    method="update",
+                         args=[{"visible": [False, False, True,  False]}]),
+                    dict(label=flim_label_btn,   method="update",
+                         args=[{"visible": [False, False, False, True ]}]),
+                ],
+                bgcolor="rgba(255,255,255,0.12)",
+                bordercolor="rgba(255,255,255,0.3)",
+                font=dict(color="white"),
+            )],
+            annotations=[dict(
+                text="View:", x=0.0, y=1.15,
+                xref="paper", yref="paper",
+                showarrow=False, font=dict(color="white", size=12),
+            )],
+        )
+
+        html = to_html(fig, include_plotlyjs=True, full_html=True)
+        Path(path).write_text(html, encoding="utf-8")
+
 
     # ── Trigger index map builders ─────────────────────────────────────────────
 
@@ -535,7 +745,10 @@ class StreamingRasterReconstructionController:
 
     @staticmethod
     def _write_ply(path, x_map, y_map, height_map, valid, color_roi_bgr=None):
+        roi_h, roi_w = height_map.shape
         mask = valid & np.isfinite(height_map)
+
+        # ── Vertices ──────────────────────────────────────────────────────────
         xs = x_map[mask].astype("float32")
         ys = y_map[mask].astype("float32")
         zs = height_map[mask].astype("float32")
@@ -554,11 +767,40 @@ class StreamingRasterReconstructionController:
             rgb = (cmap(z_norm)[:, :3] * 255).astype("uint8")
 
         n_pts = int(xs.size)
+
+        # ── Triangulated mesh faces ────────────────────────────────────────────
+        # Assign a sequential vertex index to every valid pixel; -1 = invalid.
+        vertex_index = np.full((roi_h, roi_w), -1, dtype=np.int32)
+        vertex_index[mask] = np.arange(n_pts, dtype=np.int32)
+
+        # For every 2x2 block of adjacent pixels emit up to 2 triangles.
+        # Each triangle uses only corners that are all valid.
+        ii, jj = np.meshgrid(
+            np.arange(roi_h - 1, dtype=np.int32),
+            np.arange(roi_w - 1, dtype=np.int32),
+            indexing="ij",
+        )
+        v00 = vertex_index[ii,     jj    ]
+        v10 = vertex_index[ii + 1, jj    ]
+        v01 = vertex_index[ii,     jj + 1]
+        v11 = vertex_index[ii + 1, jj + 1]
+
+        tri1_ok = (v00 >= 0) & (v10 >= 0) & (v01 >= 0)
+        tri2_ok = (v10 >= 0) & (v11 >= 0) & (v01 >= 0)
+
+        tri1 = np.stack([v00[tri1_ok], v10[tri1_ok], v01[tri1_ok]], axis=1)
+        tri2 = np.stack([v10[tri2_ok], v11[tri2_ok], v01[tri2_ok]], axis=1)
+        faces = np.concatenate([tri1, tri2], axis=0).astype(np.int32)
+        n_faces = len(faces)
+
+        # Write PLY (binary little-endian)
         header = (
             "ply\nformat binary_little_endian 1.0\n"
             f"element vertex {n_pts}\n"
             "property float x\nproperty float y\nproperty float z\n"
             "property uchar red\nproperty uchar green\nproperty uchar blue\n"
+            f"element face {n_faces}\n"
+            "property list uchar int vertex_indices\n"
             "end_header\n"
         )
         with open(str(path), "wb") as f:
@@ -566,3 +808,5 @@ class StreamingRasterReconstructionController:
             for i in range(n_pts):
                 f.write(struct.pack("<fff", float(xs[i]), float(ys[i]), float(zs[i])))
                 f.write(bytes([int(rgb[i, 0]), int(rgb[i, 1]), int(rgb[i, 2])]))
+            for tri in faces:
+                f.write(struct.pack("<Biii", 3, int(tri[0]), int(tri[1]), int(tri[2])))

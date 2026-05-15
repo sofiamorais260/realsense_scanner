@@ -30,7 +30,7 @@ class GRBLWorker(QObject):
     @pyqtSlot()
     def start(self):
         self.monitor_timer = QTimer(self)
-        self.monitor_timer.setInterval(1000)
+        self.monitor_timer.setInterval(200)  # 5 Hz for responsive position feedback
         self.monitor_timer.timeout.connect(self._poll_status)
 
     @pyqtSlot()
