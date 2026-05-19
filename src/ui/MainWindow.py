@@ -3447,16 +3447,47 @@ class MainWindow(QMainWindow):
                 surface_model = self._build_robust_surface_model_for_raster()
             if self.RASTER_SCAN_SURFACE_FOLLOWING_ENABLED and str(settings.get("scan_mode")) == "surface_following":
                 if surface_model is None:
-                    raise RasterScanError(
-                        "Surface-following raster needs a valid scan-space calibration and live depth in the ROI."
+                    # Surface model could not be built (e.g. ROI too small or insufficient
+                    # depth data). Fall back to Fixed Z automatically so the scan can still
+                    # proceed without manual intervention.
+                    # Estimate the tissue peak height directly from the depth frame so the
+                    # probe is placed at fibre_standoff above the highest point in the ROI,
+                    # matching what surface following would have done at the peak.
+                    peak_height_mm = self._estimate_roi_peak_height_mm_simple(
+                        depth_image_mm, roi_box, calibration_payload
                     )
-                scan_plan, execution = self._build_surface_following_raster_plan_and_execution(
-                    roi_box=roi_box,
-                    calibration_payload=calibration_payload,
-                    surface_model=surface_model,
-                    settings=settings,
-                    depth_image_mm=depth_image_mm,
-                )
+                    fallback_working_offset_mm = float(settings["fibre_standoff_mm"]) + peak_height_mm
+                    self.statusbar.showMessage(
+                        f"Surface model unavailable — falling back to Fixed Z at peak "
+                        f"{peak_height_mm:.1f} mm + standoff {settings['fibre_standoff_mm']:.1f} mm "
+                        f"= {fallback_working_offset_mm:.1f} mm above tray."
+                    )
+                    self._validate_flat_raster_height_settings(settings)
+                    scan_plan = self.raster_scan_controller.build_scan_plan(
+                        roi_box=roi_box,
+                        calibration_payload=calibration_payload,
+                        line_spacing_mm=settings["line_spacing_mm"],
+                        edge_margin_mm=settings["edge_margin_mm"],
+                        working_offset_mm=fallback_working_offset_mm,
+                        depth_image_mm=depth_image_mm,
+                        roi_projection_mode=self.raster_scan_controller.ROI_PROJECTION_TRAY_PLANE,
+                    )
+                    scan_plan["scan_mode"] = "fixed_z"
+                    execution = self.raster_scan_controller.build_execution_sequence(
+                        current_scanner_position_mm=self.grbl_scanner_position,
+                        scan_plan=scan_plan,
+                        safe_travel_z_mm=settings["safe_travel_z_mm"],
+                        scan_feedrate_mm_per_min=settings["scan_feedrate_mm_per_min"],
+                        travel_feedrate_mm_per_min=settings["travel_feedrate_mm_per_min"],
+                    )
+                else:
+                    scan_plan, execution = self._build_surface_following_raster_plan_and_execution(
+                        roi_box=roi_box,
+                        calibration_payload=calibration_payload,
+                        surface_model=surface_model,
+                        settings=settings,
+                        depth_image_mm=depth_image_mm,
+                    )
             else:
                 self._validate_flat_raster_height_settings(settings)
                 scan_plan = self.raster_scan_controller.build_scan_plan(
@@ -3682,6 +3713,42 @@ class MainWindow(QMainWindow):
         if surface_model is None:
             return None
         return float(surface_model["peak_height_mm"])
+
+    def _estimate_roi_peak_height_mm_simple(self, depth_image_mm, roi_box, calibration):
+        """Estimate ROI peak height directly from the depth frame without a full surface model.
+
+        Used in the Fixed Z fallback when the surface model cannot be built (e.g. small ROI).
+        Calls compute_topography_map directly, skipping the smoothing and spatial modelling
+        steps that may fail on small samples. Returns 0.0 on any failure so the probe always
+        lands at least at fibre_standoff above the tray.
+        """
+        if depth_image_mm is None or roi_box is None or calibration is None:
+            return 0.0
+        intrinsics = (
+            self.camera_worker.get_aligned_depth_intrinsics()
+            if self.camera_worker is not None
+            else None
+        )
+        if intrinsics is None:
+            return 0.0
+        try:
+            topography = compute_topography_map(
+                frame_depth=depth_image_mm,
+                depth_scale_mm=1.0,
+                intrinsics=intrinsics,
+                roi_box=roi_box,
+                xy_homography=calibration["xy_homography"],
+                plane_model=calibration["plane_model"],
+                z_scale=calibration["z_scale"],
+                z_bias_mm=calibration.get("z_bias_mm", 0.0),
+            )
+            height_map = np.asarray(topography["height_map_mm"], dtype="float32")
+            valid_mask = np.asarray(topography["valid_mask"], dtype=bool)
+            if not np.any(valid_mask):
+                return 0.0
+            return float(np.max(height_map[valid_mask]))
+        except Exception:
+            return 0.0
 
     def _build_raster_scan_preview_summary(self, settings):
         scan_plan, execution = self._build_raster_scan_plan_and_execution(settings)
